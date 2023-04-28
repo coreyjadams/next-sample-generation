@@ -1,0 +1,20 @@
+Generating a sample
+
+- Install NEXUS dependencies (geant4, gsl, hdf5)
+	- I used spack to do this
+- Install nexus (I used cmake)
+- Generate events with nexus (I used Krishan's scripts for Tl208 events)
+	- https://raw.githubusercontent.com/kvjmistry/NEWDiffusion/main/config/NEW_MC208_NN.init.mac
+	- I generated 10000 events, 130 event_ids were generated (1.3% pass)
+- Install IC
+	- Ran the stupid conda setup script, tests failed.
+	- Installing db files with `git lfs pull`
+	- Not all tests passed, but many did
+	- The cython code hadn't run because I was getting "install_layout" errors.  Updating setuptools fixed this error.
+	- After that, `python setup.py develop` ran the cython code.
+- I ran detsim with:
+	- `city detsim invisible_cities/config/detsim.conf -i ../sample-generation/NextNew.Tl208.ACTIVE.next.h5 -o ../sample-generation/NextNew.Tl208.ACTIVE.next_detsim.h5`
+	- Only took about a minute for 130 events, which is good.
+- Next, run rl deconvolution:
+	- OK that failed because I missed a bunch of steps in the cities.
+	- Going to spin this up into a parsl workflow so that I can reproduce this.
