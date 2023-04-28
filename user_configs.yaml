@@ -1,0 +1,4 @@
+local:
+  nodes_per_block: 1
+  cpus_per_node: 10
+  strategy: simple

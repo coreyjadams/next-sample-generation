@@ -1,0 +1,26 @@
+## ----------------------------------------------------------------------------
+## nexus | NEW.init.mac
+##
+## Initialization macro to simulate Tl-208 radioactive decays from the dice
+## boards in the NEW detector.
+##
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+/PhysicsList/RegisterPhysics G4EmStandardPhysics_option4
+/PhysicsList/RegisterPhysics G4DecayPhysics
+/PhysicsList/RegisterPhysics G4RadioactiveDecayPhysics
+/PhysicsList/RegisterPhysics NexusPhysics
+/PhysicsList/RegisterPhysics G4StepLimiterPhysics
+
+/nexus/RegisterGeometry NextNew
+
+/nexus/RegisterGenerator IonGenerator
+
+/nexus/RegisterPersistencyManager PersistencyManager
+
+/nexus/RegisterTrackingAction ValidationTrackingAction
+/nexus/RegisterEventAction DefaultEventAction
+/nexus/RegisterRunAction DefaultRunAction
+
+/nexus/RegisterMacro {mac_file}
