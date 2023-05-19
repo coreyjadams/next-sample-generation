@@ -70,7 +70,7 @@ def create_config(user_opts):
             executors=[ThreadPoolExecutor(
                 label='threads', 
                 # managed=True, 
-                max_threads=2, 
+                max_threads=10, 
                 storage_access=None, 
                 thread_name_prefix='', 
                 working_dir=None)
@@ -117,7 +117,6 @@ def create_config_file(inputs, outputs, run, event_start, output_filename):
         seed        = event_start+1
     )
 
-
     # Write the macro:
     with open(outputs[1].filepath, 'w') as _f:
         _f.write(this_macro)
@@ -152,6 +151,7 @@ nexus -n {n_events} -c {mac}
             mac      = inputs[0]
         )
 
+
     return script
 
 @bash_app(cache=True)
@@ -182,12 +182,12 @@ city {city}  -i {input} -o {output} --event-range=all {config}
         workdir = workdir,
         input  = inputs[0].url, 
         output = outputs[0].url)
-    print(script)
+    # print(script)
     return script
 
 
-@bash_app(cache=True)
-def larcv(inputs, outputs, workdir, script, stdout, stderr):
+@bash_app(cache=False)
+def larcv(inputs, outputs, run, subrun, workdir, script, stdout, stderr):
     """
     inputs[0] should be the input file
     outputs[0] is the output file name
@@ -199,21 +199,39 @@ def larcv(inputs, outputs, workdir, script, stdout, stderr):
     f_name = f_name.replace("_all", "")
     f_name = f_name.replace("_cuts", "")
     f_name = f_name.replace(".h5", "")
-    print(f_name)
     script = """
 
 cd {workdir}
 
-python {script}  -i {input} -o {output} -db /home/cadams/NEXT/NEXT_SparseEventID/database/new_sipm.pkl
+python {script} -sr {subrun} -r {run} -i {input} -o {output} -db /home/cadams/NEXT/NEXT_SparseEventID/database/new_sipm.pkl
 
     """.format(
         script  = script, 
         workdir = workdir,
+        subrun  = subrun,
+        run     = run,
         input   = " ".join([i.url for i in inputs]), 
         output  = f_name)
-    print(script)
+    # print(script)
     return script
 
+@bash_app(cache=False)
+def merge_larcv(inputs, outputs, workdir, stdout, stderr):
+    """
+    inputs should be a list of files for merge.
+    outputs[0] should be the name of the output file
+    """
+    # print(outputs)
+    script = """
+    cd {workdir}
+    merge_larcv3_files.py -il {in_files} -ol {out_file}
+    """.format(
+        workdir  = workdir,
+        in_files = " ".join([i.url for i in inputs]),
+        out_file = outputs[0].url
+    )
+    # print("MERGE SCRIPT: ", script)
+    return script
 
 
 def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templates):
@@ -288,7 +306,8 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
     output_holder = {}
 
-    for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
+    # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
+    for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]: 
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
@@ -303,38 +322,97 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
         output_holder[city] = latest_future.outputs[0]
 
-
     # Add a larcv step:
     larcv_script = pathlib.Path("/home/cadams/NEXT/NEXT_SparseEventID/rl_to_larcv.py").resolve()
     larcv_output = [ 
-        File(output_file.url.replace("nexus", "larcv_lr")),
+        # File(output_file.url.replace("nexus", "larcv_lr")),
         File(output_file.url.replace("nexus", "larcv_cuts")),
         File(output_file.url.replace("nexus", "larcv_all")),
     ]
-    print(larcv_output)
+
 
     inputs = [
-        output_holder[k] for k in {"hypathia", "beersheba"}
+        output_holder[k] for k in {"hypathia", "esmeralda"}
     ]
-    print(inputs)
 
     larcv_future = larcv(
         inputs  = inputs,
         outputs = larcv_output,
+        run     = run,
+        subrun  = subrun,
         workdir = str(log_dir),
         script  = str(larcv_script),
         stdout  = str(log_dir) + f"/larcv.stdout", 
         stderr  = str(log_dir) + f"/larcv.stderr"
     )
 
+    # print(larcv_future.outputs)
 
     return larcv_future
+
+def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_events, templates):
+
+
+    # This simulates one file's worth of events
+    # through to where it can be reconstructed
+
+    print(f"Run {run} starting at event {start_event}.")
+
+    all_larcv_subrun_futures = []
+
+    inputs  = {'all' : [], 'cuts' : []}
+
+    for i_subrun in range(n_subruns):
+        event_offset = start_event + i_subrun*subrun_offset 
+        print(f"Run {run}, subrun {i_subrun} starting at event {event_offset}.")
+
+        # Event offset is the absolute number of the first event in nexus.
+        larcv_futures = simulate_and_reco_file(top_dir, run, i_subrun, event_offset, n_events, templates)
+
+        inputs['cuts'].append(larcv_futures.outputs[0])
+        inputs['all'].append( larcv_futures.outputs[1])
+
+
+    # The output files need to come up one level:
+    larcv_merged_output = {}
+    for key in inputs.keys():
+        # print(inputs[key][0])
+
+        path = os.path.dirname(inputs[key][0].filepath)
+        larcv_name = os.path.basename(inputs[key][0].filepath)
+        # print(path)
+        # print(larcv_name)
+
+        path = os.path.dirname(os.path.dirname(path))
+        # print(path)
+        larcv_name = larcv_name.replace("h5", f"r{run}_merged.h5").replace("s0_","")
+        larcv_merged_output[key] = [File(path + "/" + larcv_name),]
+    
+
+
+    # These files are zipped together in the output future:
+    # a single future might contain (all.h5, cuts.h5, ...)
+    # We want to merge all common streams together
+    merged_futures = []
+    for key in inputs.keys():
+
+        this_future = merge_larcv(
+            inputs  = inputs[key],
+            outputs = larcv_merged_output[key],
+            workdir = str(path),
+            stdout  = str(path) + f"/merge.stdout", 
+            stderr  = str(path) + f"/merge.stderr"
+        )
+        merged_futures.append(this_future)
+
+    return merged_futures
+
 
 
 if __name__ == '__main__':
 
     # Where are the templates?
-    template_dir = pathlib.Path("/home/cadams/NEXT/sample-generation/config_templates/NEW/Tl208/")
+    template_dir = pathlib.Path("/home/cadams/NEXT/next-sample-generation/config_templates/NEW/Tl208/")
     
     # The input templates, which are not memoized:
     input_templates = [
@@ -347,18 +425,31 @@ if __name__ == '__main__':
     output_dir = pathlib.Path(f"/data/datasets/NEXT/NEW-simulation/")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # This simulates a file with nexus and detsim
-    # Will add diomira eventually but not there yet
-    sim_future = simulate_and_reco_file(
-        run       = 0,
-        subrun    = 0,
-        n_events  = 50000,
-        event_offset = 0,
-        top_dir   = output_dir,
-        templates = input_templates
-    )
+    # Set these parameters
+    events_per_file = 500000
+    acceptance      = 5e-3
+    n_runs          = 5
+    n_subruns       = 5
 
-    print(sim_future.result())
+    # Derive these parameters:
+    subrun_offset    = int(events_per_file * acceptance)
+    events_per_run   = int(subrun_offset    * n_subruns)
+
+    all_futures = []
+    for i_run in range(n_runs):
+        sim_future = sim_and_reco_run(
+            top_dir       = output_dir,
+            run           = i_run,
+            n_subruns     = n_subruns,
+            start_event   = i_run*events_per_run,
+            subrun_offset = subrun_offset,
+            n_events      = events_per_file,
+            templates     = input_templates
+        )
+        all_futures += sim_future
+
+    print(all_futures[-1].result())
+    # print(sim_future.result())
 
     # # This reconstructs that file:
     # input_filename = sim_future.outputs[0].filename
