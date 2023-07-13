@@ -1,0 +1,34 @@
+## ----------------------------------------------------------------------------
+## nexus | NEW_MC208_NN.config.mac
+##
+## Configuration macro to simulate Tl-208 radioactive decays from the ACTIVE region
+## in the NEW detector.
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+/run/verbose 0
+/run/printProgress 
+/event/verbose 0
+/tracking/verbose 0
+ 
+/Geometry/NextNew/pressure 10.1 bar
+/Geometry/NextNew/elfield false
+/Geometry/NextNew/max_step_size 1. mm
+
+
+# GENERATOR
+/Generator/Kr83mGenerator/region ACTIVE
+
+/PhysicsList/Nexus/clustering          false
+/PhysicsList/Nexus/drift               false
+/PhysicsList/Nexus/electroluminescence false
+/PhysicsList/Nexus/photoelectric       false
+
+/nexus/persistency/eventType background
+/nexus/persistency/outputFile {output_file}
+/nexus/persistency/start_id {event}
+
+/process/em/verbose 0
+
+### JOB CONTROL
+/nexus/random_seed {seed}
