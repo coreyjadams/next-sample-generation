@@ -1,5 +1,5 @@
+import sys, os
 import parsl
-import os
 from parsl.app.app import python_app, bash_app
 # from parsl.configs.local_threads import config
 
@@ -26,7 +26,6 @@ def id_for_memo_File(f, output_ref=False):
 
 # parsl.set_stream_logger() # <-- log everything to stdout
 
-print(parsl.__version__)
 
 
 from parsl.config import Config
@@ -40,16 +39,11 @@ from parsl.addresses import address_by_hostname
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.utils import get_all_checkpoints
 
-user_opts = {
-    "cpus_per_node" : 10,
-    "run_dir" : "/data/datasets/NEXT/NEW-simulation/runinfo",
-    "strategy" : "simple"
-}
 
 def create_config(user_opts):
 
     checkpoints = get_all_checkpoints(user_opts["run_dir"])
-    print("Found the following checkpoints: ", checkpoints)
+    # print("Found the following checkpoints: ", checkpoints)
 
     config = Config(
             # executors=[
@@ -82,14 +76,11 @@ def create_config(user_opts):
             retries=0,
             app_cache=True,
     )
+    
+    print(config)
+
 
     return config
-
-config = create_config(user_opts)
-
-print(config)
-parsl.clear()
-parsl.load(config)
 
 
 
@@ -187,7 +178,7 @@ city {city}  -i {input} -o {output} --event-range=all {config}
 
 
 @bash_app(cache=False)
-def larcv(inputs, outputs, run, subrun, workdir, script, stdout, stderr):
+def larcv(inputs, outputs, run, subrun, workdir, script, detector, sample, db, stdout, stderr):
     """
     inputs[0] should be the input file
     outputs[0] is the output file name
@@ -203,13 +194,16 @@ def larcv(inputs, outputs, run, subrun, workdir, script, stdout, stderr):
 
 cd {workdir}
 
-python {script} -sr {subrun} -r {run} -i {input} -o {output} -db /home/cadams/NEXT/NEXT_SparseEventID/database/new_sipm.pkl
+python {script} -sr {subrun} -r {run} -i {input} -o {output} -db {db} --detector {det} --sample {sample}
 
     """.format(
         script  = script, 
         workdir = workdir,
         subrun  = subrun,
         run     = run,
+        det     = detector,
+        sample  = sample,
+        db      = db,
         input   = " ".join([i.url for i in inputs]), 
         output  = f_name)
     # print(script)
@@ -234,7 +228,8 @@ def merge_larcv(inputs, outputs, workdir, stdout, stderr):
     return script
 
 
-def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templates):
+def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
+                           templates, detector, sample, ic_template_dir):
 
     # This simulates one file's worth of events
     # through to where it can be reconstructed
@@ -258,14 +253,14 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
     # Parse the basename of the input templates:
     template_basenames = [ os.path.basename(f) for f in templates]
 
+
     # Change the basename for this run / subrun:
     template_basenames = [ 
         t.replace(".mac", f".r{run}_s{subrun}.mac") for t in template_basenames
     ]
 
     # The input templates can be data futures:
-    inputs = [ File(str(f)) for f in input_templates ]
-
+    inputs = [ File(str(f)) for f in templates ]
 
     # These are the output files for the config and macro:
     outputs = [
@@ -289,6 +284,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
     )
 
+
     output_file = File(output_file)
 
 
@@ -302,7 +298,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
     latest_future = nexus_future
 
-    ic_template_dir = os.path.dirname(templates[0]) + "/IC/"
+    # ic_template_dir = os.path.dirname(templates[0]) + "/IC/"
 
     output_holder = {}
 
@@ -323,7 +319,8 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
         output_holder[city] = latest_future.outputs[0]
 
     # Add a larcv step:
-    larcv_script = pathlib.Path("/home/cadams/NEXT/NEXT_SparseEventID/rl_to_larcv.py").resolve()
+    this_dir = os.getcwd()
+    larcv_script = pathlib.Path(f"{this_dir}/larcv_skimming/to_larcv.py").resolve()
     larcv_output = [ 
         # File(output_file.url.replace("nexus", "larcv_lr")),
         File(output_file.url.replace("nexus", "larcv_cuts")),
@@ -331,15 +328,24 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
     ]
 
 
+
     inputs = [
         output_holder[k] for k in {"hypathia", "esmeralda"}
     ]
+
+    # Find the database file:
+
+    cwd = os.getcwd()
+    db = cwd + f"/config_templates/{detector}/db/{detector}_sipm.pkl"
 
     larcv_future = larcv(
         inputs  = inputs,
         outputs = larcv_output,
         run     = run,
         subrun  = subrun,
+        detector = detector,
+        db      = db,
+        sample  = sample,
         workdir = str(log_dir),
         script  = str(larcv_script),
         stdout  = str(log_dir) + f"/larcv.stdout", 
@@ -350,7 +356,9 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
     return larcv_future
 
-def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_events, templates):
+def sim_and_reco_run(top_dir, run, n_subruns, start_event, 
+                     subrun_offset, n_events, templates, 
+                     detector, sample, ic_template_dir):
 
 
     # This simulates one file's worth of events
@@ -367,7 +375,9 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
         print(f"Run {run}, subrun {i_subrun} starting at event {event_offset}.")
 
         # Event offset is the absolute number of the first event in nexus.
-        larcv_futures = simulate_and_reco_file(top_dir, run, i_subrun, event_offset, n_events, templates)
+        larcv_futures = simulate_and_reco_file(
+            top_dir, run, i_subrun, event_offset, n_events, templates,
+            detector, sample, ic_template_dir)
 
         inputs['cuts'].append(larcv_futures.outputs[0])
         inputs['all'].append( larcv_futures.outputs[1])
@@ -407,29 +417,92 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
 
     return merged_futures
 
+import argparse
+
+def build_parser():
+        # Make parser object
+    p = argparse.ArgumentParser(description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    
+    p.add_argument("--detector", "-d", type=lambda x : str(x).lower(),
+                   choices = ["new", "next-100"],
+                   required=True,
+                   help="req number")
+    p.add_argument("--sample", "-s", type=lambda x : str(x).lower(),
+                   required=True,
+                   choices=["tl208", "kr"])
+    p.add_argument("--events-per-file", "-e", type=int,
+                   default=500000,
+                   help="Number of nexus events per file")
+    p.add_argument("--runs", "-r", type=int,
+                   default=5,
+                   help="Number of runs of events to simulate")
+    p.add_argument("--sub-runs", "-sr", type=int,
+                   default=5,
+                   help="Number of sub-runs of events to simulate per run.")
+    p.add_argument("--acceptance-max", type=float,
+                   default=5e-3,
+                   help="Assumed acceptance per file.  Pick a number safely higher than the real number.")
+    p.add_argument("--output-dir", "-o", type=pathlib.Path,
+                   required=True,
+                   help="Top level directory for output")
+                
+    # group1 = p.add_mutually_exclusive_group(required=True)
+    # group1.add_argument('--enable',action="store_true")
+    # group1.add_argument('--disable',action="store_false")
+
+    return p
+
 
 
 if __name__ == '__main__':
 
+
+    parser = build_parser()
+    
+    args = parser.parse_args()
+
+
+
     # Where are the templates?
-    template_dir = pathlib.Path("/home/cadams/NEXT/next-sample-generation/config_templates/NEW/Tl208/")
+    # Located near this script:
+    script_dir = os.getcwd()
+    nexus_template_dir = pathlib.Path(f"{script_dir}/config_templates/{args.detector}/{args.sample}/")
+    IC_template_dir    = pathlib.Path(f"{script_dir}/config_templates/{args.detector}/IC/")
     
     # The input templates, which are not memoized:
-    input_templates = [
-        template_dir / pathlib.Path("NEW_MC208_NN.init.mac"),
-        template_dir / pathlib.Path("NEW_MC208_NN.config.mac"),
+    nexus_input_templates = [
+        nexus_template_dir / pathlib.Path("init.mac"),
+        nexus_template_dir / pathlib.Path("config.mac"),
     ]
 
 
     # Where to put the outputs?
-    output_dir = pathlib.Path(f"/data/datasets/NEXT/NEW-simulation/")
+    output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
+
+    user_opts = {
+        "cpus_per_node" : 10,
+        "run_dir"       : f"{str(output_dir)}/runinfo",
+        "strategy"      : "simple"
+    }
+
+
+    config = create_config(user_opts)
+
+    parsl.clear()
+    parsl.load(config)
+
+
     # Set these parameters
-    events_per_file = 500000
-    acceptance      = 5e-3
-    n_runs          = 5
-    n_subruns       = 5
+    events_per_file = args.events_per_file
+    acceptance      = args.acceptance_max
+    n_runs          = args.runs
+    n_subruns       = args.sub_runs
+
+    events_nexus = events_per_file * n_runs * n_subruns
+    print(f"Assuming acceptance of {acceptance}, generating {events_nexus} nexus events of which < {int(acceptance*events_nexus)} survive.")
 
     # Derive these parameters:
     subrun_offset    = int(events_per_file * acceptance)
@@ -444,23 +517,11 @@ if __name__ == '__main__':
             start_event   = i_run*events_per_run,
             subrun_offset = subrun_offset,
             n_events      = events_per_file,
-            templates     = input_templates
+            templates     = nexus_input_templates,
+            detector      = args.detector,
+            sample        = args.sample,
+            ic_template_dir = IC_template_dir
         )
         all_futures += sim_future
 
     print(all_futures[-1].result())
-    # print(sim_future.result())
-
-    # # This reconstructs that file:
-    # input_filename = sim_future.outputs[0].filename
-    # two_up = os.path.dirname(os.path.dirname(input_filename))
-
-
-    # # Reco_future should take
-    # reco_future = reconstruct_chain(two_up, sim_future.outputs[0])
-
-    # # futures = spawn_chain(run=0, n_subrun=1, event_offset=200, n_events=10000)
-
-    # # # Make parsl wait:
-    # # for future in futures:
-    # #     print(future.result())
