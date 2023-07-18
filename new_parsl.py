@@ -42,7 +42,7 @@ from parsl.utils import get_all_checkpoints
 
 user_opts = {
     "cpus_per_node" : 10,
-    "run_dir" : "/data/datasets/NEXT/NEW-simulation/runinfo",
+    "run_dir" : "//lus/grand/projects/datascience/cadams/NEXT/new-simulation/runinfo",
     "strategy" : "simple"
 }
 
@@ -52,29 +52,20 @@ def create_config(user_opts):
     print("Found the following checkpoints: ", checkpoints)
 
     config = Config(
-            # executors=[
-                # HighThroughputExecutor(
-                #     label="htex",
-                #     heartbeat_period=15,
-                #     heartbeat_threshold=120,
-                #     worker_debug=True,
-                #     max_workers=user_opts["cpus_per_node"],
-                #     cores_per_worker=1,
-                #     address=address_by_hostname(),
-                #     cpu_affinity="alternating",
-                #     prefetch_capacity=0,
-                #     provider=LocalProvider(
-                #         launcher=SingleNodeLauncher(debug=False),
-                #     ),
-                # ),
-            executors=[ThreadPoolExecutor(
-                label='threads', 
-                # managed=True, 
-                max_threads=10, 
-                storage_access=None, 
-                thread_name_prefix='', 
-                working_dir=None)
-            ],
+            executors=[
+                HighThroughputExecutor(
+                    label="htex",
+                    heartbeat_period=15,
+                    heartbeat_threshold=120,
+                    worker_debug=True,
+                    max_workers=user_opts["cpus_per_node"],
+                    cores_per_worker=1,
+                    address=address_by_hostname(),
+                    cpu_affinity="alternating",
+                    prefetch_capacity=0,
+                    provider=LocalProvider(
+                        launcher=PBSProProvider(debug=False),
+                    ),
             checkpoint_files = checkpoints,
             run_dir=user_opts["run_dir"],
             checkpoint_mode = 'task_exit',
@@ -138,7 +129,7 @@ def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     """
     script = """
 
-source /home/cadams/NEXT/setup_nexus.sh
+source /home/cadams/Polaris/NEXT/next-sample-generation/setup_nexus.sh
 
 cd {workdir}
 nexus -n {n_events} -c {mac}
@@ -164,9 +155,10 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     script = """
 
 # Set up IC with this stuff:
-source /home/cadams/miniconda/bin/activate
+module load conda;
+# source /home/cadams/miniconda/bin/activate
 conda activate IC-3.8-2022-04-13
-export ICTDIR=/home/cadams/NEXT/IC/
+export ICTDIR=/home/cadams/Polaris/NEXT/IC/
 export ICDIR=$ICTDIR/invisible_cities
 export PYTHONPATH=$ICTDIR
 
@@ -174,13 +166,13 @@ cd {workdir}
 
 export PATH=$ICTDIR/bin:$PATH
 
-city {city}  -i {input} -o {output} --event-range=all {config}    
+city {city}  -i {input} -o {output} --event-range=all {config}
 
     """.format(
-        city   = city, 
-        config = config, 
+        city   = city,
+        config = config,
         workdir = workdir,
-        input  = inputs[0].url, 
+        input  = inputs[0].url,
         output = outputs[0].url)
     # print(script)
     return script
@@ -203,14 +195,14 @@ def larcv(inputs, outputs, run, subrun, workdir, script, stdout, stderr):
 
 cd {workdir}
 
-python {script} -sr {subrun} -r {run} -i {input} -o {output} -db /home/cadams/NEXT/NEXT_SparseEventID/database/new_sipm.pkl
+python {script} -sr {subrun} -r {run} -i {input} -o {output} -db /home/cadams/Polaris/NEXT_SparseEventID/database/new_sipm.pkl
 
     """.format(
-        script  = script, 
+        script  = script,
         workdir = workdir,
         subrun  = subrun,
         run     = run,
-        input   = " ".join([i.url for i in inputs]), 
+        input   = " ".join([i.url for i in inputs]),
         output  = f_name)
     # print(script)
     return script
@@ -259,7 +251,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
     template_basenames = [ os.path.basename(f) for f in templates]
 
     # Change the basename for this run / subrun:
-    template_basenames = [ 
+    template_basenames = [
         t.replace(".mac", f".r{run}_s{subrun}.mac") for t in template_basenames
     ]
 
@@ -293,11 +285,11 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
 
 
     nexus_future = nexus_simulation(
-        inputs   = [nexus_config_future.outputs[0]], 
-        outputs  = [output_file,], 
+        inputs   = [nexus_config_future.outputs[0]],
+        outputs  = [output_file,],
         n_events = n_events,
         workdir  = str(log_dir),
-        stdout   = str(log_dir) + "/nexus.stdout", 
+        stdout   = str(log_dir) + "/nexus.stdout",
         stderr   = str(log_dir) + "/nexus.stderr")
 
     latest_future = nexus_future
@@ -307,24 +299,24 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
     output_holder = {}
 
     # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
-    for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]: 
+    for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]:
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
-            inputs  = [latest_future.outputs[0],] , 
-            outputs = [latest_output, ], 
+            inputs  = [latest_future.outputs[0],] ,
+            outputs = [latest_output, ],
             city    = city,
             config  = f"{ic_template_dir}/{city}.conf",
             workdir = str(log_dir),
-            stdout  = str(log_dir) + f"/{city}.stdout", 
+            stdout  = str(log_dir) + f"/{city}.stdout",
             stderr  = str(log_dir) + f"/{city}.stderr"
         )
 
         output_holder[city] = latest_future.outputs[0]
 
     # Add a larcv step:
-    larcv_script = pathlib.Path("/home/cadams/NEXT/NEXT_SparseEventID/rl_to_larcv.py").resolve()
-    larcv_output = [ 
+    larcv_script = pathlib.Path("/home/cadams/Polaris/NEXT_SparseEventID/rl_to_larcv.py").resolve()
+    larcv_output = [
         # File(output_file.url.replace("nexus", "larcv_lr")),
         File(output_file.url.replace("nexus", "larcv_cuts")),
         File(output_file.url.replace("nexus", "larcv_all")),
@@ -342,7 +334,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events, templat
         subrun  = subrun,
         workdir = str(log_dir),
         script  = str(larcv_script),
-        stdout  = str(log_dir) + f"/larcv.stdout", 
+        stdout  = str(log_dir) + f"/larcv.stdout",
         stderr  = str(log_dir) + f"/larcv.stderr"
     )
 
@@ -363,7 +355,7 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
     inputs  = {'all' : [], 'cuts' : []}
 
     for i_subrun in range(n_subruns):
-        event_offset = start_event + i_subrun*subrun_offset 
+        event_offset = start_event + i_subrun*subrun_offset
         print(f"Run {run}, subrun {i_subrun} starting at event {event_offset}.")
 
         # Event offset is the absolute number of the first event in nexus.
@@ -387,7 +379,7 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
         # print(path)
         larcv_name = larcv_name.replace("h5", f"r{run}_merged.h5").replace("s0_","")
         larcv_merged_output[key] = [File(path + "/" + larcv_name),]
-    
+
 
 
     # These files are zipped together in the output future:
@@ -400,7 +392,7 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
             inputs  = inputs[key],
             outputs = larcv_merged_output[key],
             workdir = str(path),
-            stdout  = str(path) + f"/merge.stdout", 
+            stdout  = str(path) + f"/merge.stdout",
             stderr  = str(path) + f"/merge.stderr"
         )
         merged_futures.append(this_future)
@@ -412,8 +404,8 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event, subrun_offset, n_even
 if __name__ == '__main__':
 
     # Where are the templates?
-    template_dir = pathlib.Path("/home/cadams/NEXT/next-sample-generation/config_templates/NEW/Tl208/")
-    
+    template_dir = pathlib.Path("/home/cadams/Polaris/NEXT/next-sample-generation/config_templates/NEW/Tl208/")
+
     # The input templates, which are not memoized:
     input_templates = [
         template_dir / pathlib.Path("NEW_MC208_NN.init.mac"),
@@ -422,14 +414,32 @@ if __name__ == '__main__':
 
 
     # Where to put the outputs?
-    output_dir = pathlib.Path(f"/data/datasets/NEXT/NEW-simulation/")
+    output_dir = pathlib.Path(f"/lus/grand/projects/datascience/cadams/NEXT/new-simulation/")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Set these parameters
-    events_per_file = 500000
+    events_per_file = 360000
     acceptance      = 5e-3
-    n_runs          = 5
-    n_subruns       = 5
+    n_runs          = 50
+    n_subruns       = 100
+
+    # The real acceptance is about 28/25000 = 1.1e-3
+    # So, to reach 1M events in the "all" files we need to simulate
+    # 1e6 / 5e-3 = (approx) 9e8 events
+    # Spreading this over 25 "runs" we need 3.6e7 events per run.
+    # Spreading each run over 50 input files we need 7.2e5 events per file
+    #
+    # Another way of thinking of this is we can simulate 720k events in nexus.
+    # We get about 792 events in one file.
+    # We get 50 files per subrun = 39600 events per run
+    # We're doing 50 runs = 1.98M events
+
+    # On polaris, 200000 events in nexus took about 7 minutes on one CPU
+    # Nexus is about half of the total time, so assume 14200 events/minute/cpu
+    # Without jobs truncating, that's almost 900000 events/cpu-hour. (9e5)
+    # That's 5.76e8 events/node-hour @ 64 cores per node.
+    # 50 runs with 50 subruns with 720000 events is 1.8 billion events (1.8e9)
+    # To reach that, we need  1.8e9 / 5.76e8 = 3 to 4 node hours
 
     # Derive these parameters:
     subrun_offset    = int(events_per_file * acceptance)
