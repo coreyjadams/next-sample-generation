@@ -23,7 +23,7 @@
 /Generator/IonGenerator/mass_number 208
 /Generator/IonGenerator/region INTERNAL_PORT_UPPER
 
-/Actions/DefaultEventAction/min_energy 1.0 MeV
+/Actions/DefaultEventAction/min_energy 1.3 MeV
 
 /PhysicsList/Nexus/clustering          false
 /PhysicsList/Nexus/drift               false

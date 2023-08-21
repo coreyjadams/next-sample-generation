@@ -476,7 +476,7 @@ if __name__ == '__main__':
         nexus_template_dir / pathlib.Path("config.mac"),
     ]
 
-
+    print(nexus_input_templates)
     # Where to put the outputs?
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)

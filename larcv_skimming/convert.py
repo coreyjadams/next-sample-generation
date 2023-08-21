@@ -3,8 +3,10 @@ import numpy
 
 from meta import get_meta, get_pmt_meta
 
-from pmaps import store_pmaps
-from mc import store_mc_info, get_tl208_label_and_store_vertex
+from pmaps  import store_pmaps
+from chits  import store_chits
+from mc     import store_mc_info
+from vertex import get_tl208_label_and_store_vertex
 
 
 def slice_into_event(_pmaps, event_number, _keys):
@@ -96,6 +98,7 @@ def convert_to_larcv(
     run     = image_tables["/Run/runInfo/"]
     summary = image_tables["/Summary/Events/"]
 
+    low_chits = image_tables["/CHITS/lowTh/"]
 
     # event no is events[i_evt][0]
     # run no is run[i_evt][0]
@@ -163,6 +166,10 @@ def convert_to_larcv(
             else:
                 found_all_images = False
                 print("no deco hits found")
+
+        this_low_chits = low_chits[low_chits['event'] == event_no] 
+
+        store_chits(io_manager, base_meta, this_low_chits)
 
         # We store the measured energy, correct, in 'energy_deposit'
         # We store the mc energy, if we have it, in 'energy_init'

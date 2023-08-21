@@ -34,6 +34,8 @@ def read_mandatory_tables(input_files):
         "/PMAPS/S2/",
         "/PMAPS/S2Pmt/",
         "/PMAPS/S2Si/",
+        "/CHITS/highTh/",
+        "/CHITS/lowTh/",
     ]
 
     optional_mc_tables = [
