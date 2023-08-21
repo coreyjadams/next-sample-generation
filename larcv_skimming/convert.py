@@ -1,7 +1,7 @@
 import larcv
 import numpy
 
-from meta import get_meta
+from meta import get_meta, get_pmt_meta
 
 from pmaps import store_pmaps
 from mc import store_mc_info, get_tl208_label_and_store_vertex
@@ -121,6 +121,7 @@ def convert_to_larcv(
 
     base_meta = get_meta(detector)
     hr_meta   = get_meta(detector, zoom=20)
+    pmt_meta  = get_pmt_meta(n_pmts=12, n_time_ticks=550)
 
     mask = basic_event_pass(summary, detector, sample)
 
@@ -148,7 +149,7 @@ def convert_to_larcv(
         this_pmaps = slice_into_event(pmap_tables, event_no, keys)
 
         for _, io_manager in io_dict.items():
-            found_pmaps = store_pmaps(io_manager, base_meta, this_pmaps, db_lookup)
+            found_pmaps = store_pmaps(io_manager, base_meta, pmt_meta, this_pmaps, db_lookup)
         if not found_pmaps: continue
 
         found_all_images = found_pmaps and found_all_images
