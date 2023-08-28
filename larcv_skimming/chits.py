@@ -7,7 +7,6 @@ N_TICKS=550
 def store_chits(io_manager, meta, this_chits):
 
 
-    print(this_chits.dtype)
     # Put them into larcv:
     event_sparse3d = io_manager.get_data("sparse3d", "chits")
     event_sparse3d.clear()

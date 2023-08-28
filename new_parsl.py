@@ -152,6 +152,7 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     outputs[0] is the output file name
     """
 
+    # what is the location of this script?
     script = """
 
 # Set up IC with this stuff:
@@ -160,6 +161,7 @@ conda activate IC-3.8-2022-04-13
 export ICTDIR=/home/cadams/NEXT/IC/
 export ICDIR=$ICTDIR/invisible_cities
 export PYTHONPATH=$ICTDIR
+export DBDIR=/home/cadams/NEXT/next-sample-generation/config_templates/
 
 cd {workdir}
 
@@ -173,7 +175,7 @@ city {city}  -i {input} -o {output} --event-range=all {config}
         workdir = workdir,
         input  = inputs[0].url, 
         output = outputs[0].url)
-    # print(script)
+
     return script
 
 
@@ -303,7 +305,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
     output_holder = {}
 
     # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
-    for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]: 
+    for city in ["detsim", "diomira", "irene", "penthesilea", "esmeralda", "beersheba"]: 
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
@@ -330,7 +332,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
 
     inputs = [
-        output_holder[k] for k in {"hypathia", "esmeralda"}
+        output_holder[k] for k in {"irene", "esmeralda", "beersheba"}
     ]
 
     # Find the database file:

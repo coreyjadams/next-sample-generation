@@ -31,7 +31,7 @@ def store_pmaps(io_manager, meta, pmt_meta, this_pmaps, db_lookup):
             index = meta.position_to_index([x, y, z])
 
             if index >= meta.total_voxels():
-                print(f"Skipping voxel at original coordinates ({x}, {y}, {z}, index {index}) as it is out of bounds")
+                # print(f"Skipping voxel at original coordinates ({x}, {y}, {z}, index {index}) as it is out of bounds")
                 continue
             st.emplace(larcv.Voxel(index, e), False)
 
@@ -45,6 +45,8 @@ def store_pmaps(io_manager, meta, pmt_meta, this_pmaps, db_lookup):
 
     event_sparse2d = io_manager.get_data("sparse2d", "S2Pmt")
     event_sparse2d.clear()
+
+    pmt_scaling = 1e-4
     
     for i_pmt, z, e in zip(pmt["pmt"], pmt["t"], pmt["e"]):
         # First, get the index of this hit:
@@ -52,9 +54,9 @@ def store_pmaps(io_manager, meta, pmt_meta, this_pmaps, db_lookup):
             index = pmt_meta.position_to_index([i_pmt, z])
         
             if index >= pmt_meta.total_voxels():
-                print(f"Skipping voxel at original coordinates ({i_pmt}, {z}, index {index}) as it is out of bounds")
+                # print(f"Skipping voxel at original coordinates ({i_pmt}, {z}, index {index}) as it is out of bounds")
                 continue
-            pmt_st.emplace(larcv.Voxel(index, e), False)
+            pmt_st.emplace(larcv.Voxel(index, e*pmt_scaling), False)
     event_sparse2d.set(pmt_st)
 
     return True

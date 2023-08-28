@@ -49,20 +49,20 @@ def get_tl208_label_and_store_vertex(io_manager, this_hits, this_particles, meta
             (vertex['initial_x'], vertex['initial_y'], vertex['initial_z']),
             (0., 0., 0.)
         )
-        print("vertex_bbox: ", vertex_bbox)
+        # print("vertex_bbox: ", vertex_bbox)
         vertex_collection.append(vertex_bbox)
-        print("vertex_collection: ", vertex_collection, vertex_collection.size())
+        # print("vertex_collection: ", vertex_collection, vertex_collection.size())
         # vertex_set.append(vertex_collection)
-        vertex_set.set([vertex_collection,])
-        print("vertex_set.at(0).size(): ", vertex_set.at(0).size())
+    vertex_set.set([vertex_collection,])
+        # print("vertex_set.at(0).size(): ", vertex_set.at(0).size())
 
     # Are any of the gamma daughters e+?
     # Implicitly checking only the daughter that start in the ACTIVE volume
     if b'e+' in active_gamma_daughters['particle_name']:
         positron = True
 
-    print("vertex_set: ", vertex_set)
+    # print("vertex_set: ", vertex_set)
 
-    print("positron: ", positron)
+    # print("positron: ", positron)
 
     return positron

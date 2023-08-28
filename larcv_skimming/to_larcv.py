@@ -24,7 +24,6 @@ def read_mandatory_tables(input_files):
 
     # List of tables that must be found:
     mandatory_tables = [
-        # "/DECO/Events/",
         "/Summary/Events/",
         "/Run/events/",
         "/Run/eventMap/",
@@ -38,14 +37,15 @@ def read_mandatory_tables(input_files):
         "/CHITS/lowTh/",
     ]
 
-    optional_mc_tables = [
+    optional_tables_list = [
         # "/MC/extents/",
         "/MC/hits/",
         "/MC/particles/",
+        "/DECO/Events/",
     ]
 
     image_tables = {}
-    mc_tables    = {}
+    optional_tables    = {}
 
     for _f in input_files:
         open_file = tables.open_file(str(_f), 'r')
@@ -68,17 +68,17 @@ def read_mandatory_tables(input_files):
             if key in mandatory_tables: mandatory_tables.remove(key)
 
 
-        # Look for the optional MC tables:
+        # Look for the optional tables:
         o_found_tables = {}
-        for table_name in optional_mc_tables:
+        for table_name in optional_tables_list:
             if has_table(open_file, table_name):
                 o_found_tables[table_name] = open_file.get_node(table_name).read()
             else:
                 pass
 
-        mc_tables.update(o_found_tables)
+        optional_tables.update(o_found_tables)
         for key in o_found_tables.keys():
-            if key in optional_mc_tables: optional_mc_tables.remove(key)
+            if key in optional_tables_list: optional_tables_list.remove(key)
 
 
         # Close the file:
@@ -87,19 +87,22 @@ def read_mandatory_tables(input_files):
     if len(mandatory_tables) != 0:
         raise Exception(f"Could not find mandatory tables {mandatory_tables}")
 
-    if len(optional_mc_tables) != 0:
+    print(optional_tables_list)
+    print(optional_tables.keys())
+
+    if len(optional_tables_list) != 0:
         print("Not all mc tables found, skipping MC")
-        print(f"  Missing: {optional_mc_tables}")
-        mc_tables = None
+        print(f"  Missing: {optional_tables_list_list}")
+        optional_tables = None
 
 
-    return image_tables, mc_tables
+    return image_tables, optional_tables
 
 
 def convert_entry_point(input_files, output_file, run, subrun, db_location, detector, sample):
 
-    image_tables, mc_tables = read_mandatory_tables(input_files)
-
+    image_tables, optional_tables = read_mandatory_tables(input_files)
+    print(optional_tables['/DECO/Events/'])
 
     sipm_db = pandas.read_pickle(db_location)
     db_lookup = {
@@ -108,8 +111,13 @@ def convert_entry_point(input_files, output_file, run, subrun, db_location, dete
         "active"   : numpy.asarray(sipm_db['Active']),
     }
 
+    process_lr_hits = True
+    if '/DECO/Events/' in optional_tables: process_lr_hits=True
 
-    convert_to_larcv(image_tables, mc_tables, output_file, db_lookup, detector, sample, run, subrun)
+
+    convert_to_larcv(
+        image_tables, optional_tables, output_file, db_lookup, 
+        detector, sample, run, subrun, process_lr_hits)
 
 
     return
