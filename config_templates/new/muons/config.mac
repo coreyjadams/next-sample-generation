@@ -1,0 +1,48 @@
+## ----------------------------------------------------------------------------
+## nexus | DEMO_muons.config.mac
+##
+## Configuration macro to simulate muons in the NEXT-DEMO detector.
+##
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+# VERBOSITY
+/control/verbose 0
+/run/verbose 0
+/event/verbose 1
+/tracking/verbose 1
+
+#/process/em/verbose 0
+
+# GEOMETRY
+/Geometry/NextNew/elfield false
+/Geometry/NextNew/pressure 10.1 bar
+/Geometry/NextNew/gas enrichedXe
+
+# GENERATOR
+/Generator/MuonGenerator/min_energy  200 GeV
+/Generator/MuonGenerator/max_energy  200 GeV
+/Generator/MuonGenerator/region EXTERNAL_SPHERE
+
+
+# Use angular distribution simulated/measured at LSC
+/Generator/MuonGenerator/use_lsc_dist false
+
+# User specified muon direction. Must set use_lsc_dist to false for this to work
+ /Generator/MuonGenerator/user_dir 0 -1 0
+
+# For coordinate system transformation, do not edit
+/Generator/MuonGenerator/azimuth_rotation 150 deg
+
+# ACTIONS
+## /Actions/MuonsEventAction/min_energy 0.6 MeV
+#/Actions/MuonsEventAction/stringHist MuonsHist_1.csv
+
+# PHYSICS
+/PhysicsList/Nexus/clustering          false
+/PhysicsList/Nexus/drift               false
+/PhysicsList/Nexus/electroluminescence false
+
+# PERSISTENCY
+/nexus/persistency/outputFile {output_file}
+/nexus/persistency/start_id {event}
