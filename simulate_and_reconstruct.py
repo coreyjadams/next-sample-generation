@@ -4,25 +4,6 @@ from parsl.app.app import python_app, bash_app
 # from parsl.configs.local_threads import config
 
 
-from parsl.data_provider.files import File
-from parsl.dataflow.memoization import id_for_memo
-
-
-@id_for_memo.register(File)
-def id_for_memo_File(f, output_ref=False):
-    if output_ref:
-        # logger.debug("hashing File as output ref without content: {}".format(f))
-        return f.url
-    else:
-        # logger.debug("hashing File as input with content: {}".format(f))
-        assert f.scheme == "file"
-        filename = f.filepath
-        try:
-            stat_result = os.stat(filename)
-
-            return [f.url, stat_result.st_size, stat_result.st_mtime]
-        except:
-            return [f.url, 0, 0]
 
 # parsl.set_stream_logger() # <-- log everything to stdout
 
@@ -491,7 +472,7 @@ if __name__ == '__main__':
 
 
     user_opts = {
-        "cpus_per_node" : 16,
+        "cpus_per_node" : 8,
         "run_dir"       : f"{str(output_dir)}/runinfo",
         "strategy"      : "simple"
     }

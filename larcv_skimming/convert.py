@@ -210,6 +210,18 @@ def convert_to_larcv(
 
                 event_part   = io_manager.get_data("particle", "event")
                 event_part.append(particle)
+        if tables_found["krypton"]:
+            # if len(this_summary) > 1:
+            #     print(this_summary)
+            #     print(event_no in passed_events)
+
+            particle = larcv.Particle()
+            # Calculate the reconstructed energy of the event:
+            particle.energy_deposit(0.0415575)
+            particle.position(this_summary['X'][0], this_summary['Y'][0], this_summary['Z'][0], 0.0)
+
+            event_part   = io_manager.get_data("particle", "event")
+            event_part.append(particle)
 
         # Set the event ID for all managers:
         for key, val in io_dict.items():
