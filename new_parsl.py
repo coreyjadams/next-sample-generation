@@ -45,6 +45,19 @@ def create_config(user_opts):
     checkpoints = get_all_checkpoints(user_opts["run_dir"])
     # print("Found the following checkpoints: ", checkpoints)
 
+    provider = PBSProProvider(
+        account = "datascience",
+        queue   = "debug",
+        nodes_per_block = 1,
+        cpus_per_node   = user_opts["cpus_per_node"],
+        init_blocks     = 1,
+        max_blocks      = 1,
+        walltime        = "01:00:00",
+        scheduler_options = '#PBS -l filesystems=home:grand',
+        worker_init     = "source /home/cadams/Polaris/NEXT/next-sample-generation/setup_worker.sh",
+    )
+                        
+
     config = Config(
             executors=[
                 HighThroughputExecutor(
@@ -57,9 +70,10 @@ def create_config(user_opts):
                     address=address_by_hostname(),
                     cpu_affinity="alternating",
                     prefetch_capacity=0,
-                    provider=LocalProvider(
-                        launcher=PBSProProvider(debug=False),
-                    ),
+                    provider=LocalProvider()
+                    # provider=provider,
+                ),
+            ],
             checkpoint_files = checkpoints,
             run_dir=user_opts["run_dir"],
             checkpoint_mode = 'task_exit',
@@ -297,11 +311,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
     output_holder = {}
 
     # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
-<<<<<<< HEAD
-    for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]:
-=======
     for city in ["detsim", "diomira", "irene", "penthesilea", "esmeralda", "beersheba"]: 
->>>>>>> 4239e72762a2ab673c58df24e1260f071a96ce4b
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
@@ -481,7 +491,7 @@ if __name__ == '__main__':
 
 
     user_opts = {
-        "cpus_per_node" : 10,
+        "cpus_per_node" : 16,
         "run_dir"       : f"{str(output_dir)}/runinfo",
         "strategy"      : "simple"
     }
