@@ -1,0 +1,34 @@
+## ----------------------------------------------------------------------------
+## nexus | DEMO_muons.init.mac
+##
+## Initialization macro to simulate muons in the NEXT-DEMO detector.
+##
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+### PHYSICS
+# /control/execute macros/physics/DefaultPhysicsList.mac
+/PhysicsList/RegisterPhysics G4EmStandardPhysics_option4
+/PhysicsList/RegisterPhysics G4DecayPhysics
+/PhysicsList/RegisterPhysics G4RadioactiveDecayPhysics
+/PhysicsList/RegisterPhysics NexusPhysics
+/PhysicsList/RegisterPhysics G4StepLimiterPhysics
+
+### GEOMETRY
+/nexus/RegisterGeometry NextNew
+
+### GENERATOR
+/nexus/RegisterGenerator MuonGenerator
+
+### PERSISTENCY
+/nexus/RegisterPersistencyManager PersistencyManager
+
+### ACTIONS
+/nexus/RegisterTrackingAction DefaultTrackingAction
+/nexus/RegisterRunAction DefaultRunAction
+
+# Use muon event action for debugging
+#/nexus/RegisterEventAction DefaultEventAction
+/nexus/RegisterEventAction MuonsEventAction
+
+/nexus/RegisterMacro {mac_file}

@@ -143,6 +143,7 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     outputs[0] is the output file name
     """
 
+    # what is the location of this script?
     script = """
 
 # Set up IC with this stuff:
@@ -152,6 +153,7 @@ conda activate IC-3.8-2022-04-13
 export ICTDIR=/home/cadams/Polaris/NEXT/IC/
 export ICDIR=$ICTDIR/invisible_cities
 export PYTHONPATH=$ICTDIR
+export DBDIR=/home/cadams/NEXT/next-sample-generation/config_templates/
 
 cd {workdir}
 
@@ -165,7 +167,7 @@ city {city}  -i {input} -o {output} --event-range=all {config}
         workdir = workdir,
         input  = inputs[0].url,
         output = outputs[0].url)
-    # print(script)
+
     return script
 
 
@@ -295,7 +297,11 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
     output_holder = {}
 
     # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
+<<<<<<< HEAD
     for city in ["detsim", "hypathia", "penthesilea", "esmeralda"]:
+=======
+    for city in ["detsim", "diomira", "irene", "penthesilea", "esmeralda", "beersheba"]: 
+>>>>>>> 4239e72762a2ab673c58df24e1260f071a96ce4b
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
@@ -322,7 +328,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
 
     inputs = [
-        output_holder[k] for k in {"hypathia", "esmeralda"}
+        output_holder[k] for k in {"irene", "esmeralda", "beersheba"}
     ]
 
     # Find the database file:
@@ -422,7 +428,7 @@ def build_parser():
                    help="req number")
     p.add_argument("--sample", "-s", type=lambda x : str(x).lower(),
                    required=True,
-                   choices=["tl208", "kr"])
+                   choices=["tl208", "kr", "muons"])
     p.add_argument("--events-per-file", "-e", type=int,
                    default=500000,
                    help="Number of nexus events per file")
@@ -468,7 +474,7 @@ if __name__ == '__main__':
         nexus_template_dir / pathlib.Path("config.mac"),
     ]
 
-
+    print(nexus_input_templates)
     # Where to put the outputs?
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)

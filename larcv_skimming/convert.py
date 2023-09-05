@@ -1,11 +1,13 @@
 import larcv
 import numpy
 
-from meta import get_meta
+from meta import get_meta, get_pmt_meta
 
-from pmaps import store_pmaps
-from mc import store_mc_info, get_tl208_label_and_store_vertex
-
+from pmaps  import store_pmaps
+from chits  import store_chits
+from mc     import store_mc_info
+from vertex import get_tl208_label_and_store_vertex
+from lr     import store_lr_hits
 
 def slice_into_event(_pmaps, event_number, _keys):
     # What does this correspond to in the raw file?
@@ -39,7 +41,7 @@ def energy_corrected(energy, z_min, z_max):
 
 def convert_to_larcv(
         image_tables, 
-        mc_tables, 
+        optional_tables, 
         output_name, 
         db_lookup, 
         detector,
@@ -50,9 +52,9 @@ def convert_to_larcv(
         ):
 
     # print(image_tables.keys())
-    # print(mc_tables.keys())
+    # print(optional_tables.keys())
 
-    if mc_tables is not None:
+    if optional_tables is not None:
         is_mc = True
     else:
         is_mc = False
@@ -87,15 +89,16 @@ def convert_to_larcv(
     #  - read this for whole-event labels, but also gather out
 
     if is_mc:
-        # mc_extents   = mc_tables["/MC/extents/"]
-        mc_hits      = mc_tables["/MC/hits/"]
-        mc_particles = mc_tables["/MC/particles/"]
+        # mc_extents   = optional_tables["/MC/extents/"]
+        mc_hits      = optional_tables["/MC/hits/"]
+        mc_particles = optional_tables["/MC/particles/"]
 
     eventMap = image_tables["/Run/eventMap/"]
     events  = image_tables["/Run/events/"]
     run     = image_tables["/Run/runInfo/"]
     summary = image_tables["/Summary/Events/"]
 
+    low_chits = image_tables["/CHITS/lowTh/"]
 
     # event no is events[i_evt][0]
     # run no is run[i_evt][0]
@@ -113,14 +116,15 @@ def convert_to_larcv(
     # event_energy  = summary['evt_energy']
 
     if process_lr_hits:
-        lr_hits = image_tables["/DECO/Events/"]
+        lr_hits = optional_tables["/DECO/Events/"]
 
     keys = {"S1", "S1Pmt", "S2", "S2Pmt", "S2Si"}
     pmap_tables = {key : image_tables["/PMAPS/" + key + "/"] for key in keys}
 
 
-    base_meta = get_meta(detector)
-    hr_meta   = get_meta(detector, zoom=20)
+    base_meta = get_meta(detector, zoom=[1.,1.,0.5])
+    hr_meta   = get_meta(detector, zoom=[10,10,1])
+    pmt_meta  = get_pmt_meta(n_pmts=12, n_time_ticks=550)
 
     mask = basic_event_pass(summary, detector, sample)
 
@@ -148,7 +152,7 @@ def convert_to_larcv(
         this_pmaps = slice_into_event(pmap_tables, event_no, keys)
 
         for _, io_manager in io_dict.items():
-            found_pmaps = store_pmaps(io_manager, base_meta, this_pmaps, db_lookup)
+            found_pmaps = store_pmaps(io_manager, base_meta, pmt_meta, this_pmaps, db_lookup)
         if not found_pmaps: continue
 
         found_all_images = found_pmaps and found_all_images
@@ -158,10 +162,15 @@ def convert_to_larcv(
             this_lr_hits = lr_hits[lr_hits['event'] == event_no]
             if len(this_lr_hits) > 0:
                 for _, io_manager in io_dict.items():
-                    store_lr_hits(io_manager, this_lr_hits)
+                    store_lr_hits(io_manager, this_lr_hits, hr_meta)
             else:
                 found_all_images = False
                 print("no deco hits found")
+
+        this_low_chits = low_chits[low_chits['event'] == event_no] 
+
+        for _, io_manager in io_dict.items():
+            store_chits(io_manager, base_meta, this_low_chits)
 
         # We store the measured energy, correct, in 'energy_deposit'
         # We store the mc energy, if we have it, in 'energy_init'
