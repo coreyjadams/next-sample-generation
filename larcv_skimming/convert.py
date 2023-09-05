@@ -16,23 +16,6 @@ def slice_into_event(_pmaps, event_number, _keys):
 
     return this_pmaps
 
-def basic_event_pass(summary, detector, sample):
-
-    # 1 track:
-    mask = summary['evt_ntrks'] == 1
-
-
-    # Z Min:
-    mask = numpy.logical_and(mask, summary['evt_z_min'] > 20.0) # Z = 0 + 2cm
-
-    # Z Max:
-    mask = numpy.logical_and(mask, summary['evt_z_max'] < 510.0) # Z = 55 - 2 cm
-
-    # R Max:
-    mask = numpy.logical_and(mask, summary['evt_r_max'] < 180.0) # R = 180 CM from ander
-
-    return mask
-
 
 def energy_corrected(energy, z_min, z_max):
     Z_corr_factor = 2.76e-4
@@ -40,40 +23,30 @@ def energy_corrected(energy, z_min, z_max):
     return energy/(1. - Z_corr_factor*(z_max-z_min))
 
 def convert_to_larcv(
-        image_tables, 
-        optional_tables, 
+        input_tables, 
+        tables_found, 
         output_name, 
         db_lookup, 
         detector,
         sample,
         run_no, 
         subrun, 
-        process_lr_hits=False,
         ):
 
-    # print(image_tables.keys())
-    # print(optional_tables.keys())
-
-    if optional_tables is not None:
-        is_mc = True
-    else:
-        is_mc = False
-
+    is_mc = tables_found["mc"]
 
     # writing 3 output files: everything, lr, and cuts:
     io_dict = {}
     keys = ["all", "cuts"]
-    if process_lr_hits: keys.append("lr")
+    if tables_found["lr"]: keys.append("lr")
     for key in keys:
         this_output_name = str(output_name) + f"_{key}.h5"
-        # print(this_output_name)
         # Create an output larcv file:
         _io_manager = larcv.IOManager(larcv.IOManager.kWRITE)
         _io_manager.set_out_file(str(this_output_name))
         _io_manager.initialize()
         io_dict[key] = _io_manager
 
-    # output      = output_directory /  pathlib.Path(output_name)
 
 
     # Now, ready to go.  Read in a couple tables:
@@ -89,16 +62,16 @@ def convert_to_larcv(
     #  - read this for whole-event labels, but also gather out
 
     if is_mc:
-        # mc_extents   = optional_tables["/MC/extents/"]
-        mc_hits      = optional_tables["/MC/hits/"]
-        mc_particles = optional_tables["/MC/particles/"]
+        eventMap     = input_tables["mc"]["/Run/eventMap/"]
+        mc_hits      = input_tables["mc"]["/MC/hits/"]
+        mc_particles = input_tables["mc"]["/MC/particles/"]
 
-    eventMap = image_tables["/Run/eventMap/"]
-    events  = image_tables["/Run/events/"]
-    run     = image_tables["/Run/runInfo/"]
-    summary = image_tables["/Summary/Events/"]
+    events  = input_tables["run"]["/Run/events/"]
+    run     = input_tables["run"]["/Run/runInfo/"]
 
-    low_chits = image_tables["/CHITS/lowTh/"]
+
+    if tables_found["chits"]:
+        low_chits = input_tables["/CHITS/lowTh/"]
 
     # event no is events[i_evt][0]
     # run no is run[i_evt][0]
@@ -115,35 +88,46 @@ def convert_to_larcv(
 
     # event_energy  = summary['evt_energy']
 
-    if process_lr_hits:
-        lr_hits = optional_tables["/DECO/Events/"]
+    if tables_found["lr"]:
+        lr_hits = input_tables["lr"]["/DECO/Events/"]
 
     keys = {"S1", "S1Pmt", "S2", "S2Pmt", "S2Si"}
-    pmap_tables = {key : image_tables["/PMAPS/" + key + "/"] for key in keys}
+    pmap_tables = {key : input_tables["pmaps"]["/PMAPS/" + key + "/"] for key in keys}
 
 
     base_meta = get_meta(detector, zoom=[1.,1.,0.5])
     hr_meta   = get_meta(detector, zoom=[10,10,1])
     pmt_meta  = get_pmt_meta(n_pmts=12, n_time_ticks=550)
 
-    mask = basic_event_pass(summary, detector, sample)
-
-    passed_events = summary['event'][mask]
+    # Problematic:
+    if tables_found["basic"]:
+        from filter import basic_event_pass
+        summary = input_tables["basic"]["/Summary/Events/"]
+        mask = basic_event_pass(summary, detector, sample)
+        passed_events = summary['event'][mask]
+    elif tables_found["krypton"]:
+        from filter import krypton_selection
+        summary = input_tables["krypton"]["/DST/Events/"]
+        print(summary.dtype)
+        mask = krypton_selection(summary, detector, sample)
+        passed_events = summary['event'][mask]
+    else:
+        summary = None
+        passed_events = event_numbers
 
 
     # print(numpy.unique(lr_hits['event'], return_counts=True))
     for i_evt, event_no in enumerate(event_numbers):
 
+        # if event_no not in passed_events: continue
+
         found_all_images = True
-        out_of_map = False
 
 
 
         # Slice off this summary object:
         this_summary = summary[summary['event'] == event_no]
 
-        if this_summary['evt_out_of_map']:
-            out_of_map = True
 
 
         if len(this_summary) == 0:continue
@@ -158,7 +142,7 @@ def convert_to_larcv(
         found_all_images = found_pmaps and found_all_images
         # print(event_no, found_pmaps)
         # Parse out the deconv hits:
-        if process_lr_hits:
+        if tables_found["lr"]:
             this_lr_hits = lr_hits[lr_hits['event'] == event_no]
             if len(this_lr_hits) > 0:
                 for _, io_manager in io_dict.items():
@@ -167,10 +151,11 @@ def convert_to_larcv(
                 found_all_images = False
                 print("no deco hits found")
 
-        this_low_chits = low_chits[low_chits['event'] == event_no] 
+        if tables_found["chits"]:
+            this_low_chits = low_chits[low_chits['event'] == event_no] 
 
-        for _, io_manager in io_dict.items():
-            store_chits(io_manager, base_meta, this_low_chits)
+            for _, io_manager in io_dict.items():
+                store_chits(io_manager, base_meta, this_low_chits)
 
         # We store the measured energy, correct, in 'energy_deposit'
         # We store the mc energy, if we have it, in 'energy_init'
@@ -190,26 +175,6 @@ def convert_to_larcv(
             this_particles = mc_particles[mc_particles['event_id'] == nexus_event]
             this_hits      = mc_hits[mc_hits['event_id'] == nexus_event]
 
-            # mc_mask = mc_extents['evt_number'] == event_no
-            # this_index = numpy.argwhere(mc_mask)[0][0]
-
-            # this_mc_extents = mc_extents[this_index]
-            # particle_stop = int(this_mc_extents['last_particle'] + 1) # Particle index is not inclusive in the last index, add one
-            # hit_stop      = int(this_mc_extents['last_hit'] + 1)      # Particle index is not inclusive in the last index, add one
-
-            # if this_index != 0:
-            #     previous_mc_extents = mc_extents[this_index - 1]
-            #     particle_start = int(previous_mc_extents['last_particle'] + 1)
-            #     hit_start      = int(previous_mc_extents['last_hit'] + 1)
-            # else:
-            #     particle_start = 0
-            #     hit_start      = 0
-
-
-            # this_particles = mc_particles[particle_start:particle_stop]
-            # this_hits      = mc_hits[hit_start:hit_stop]
-
-            # # print(len(this_hits))
 
             # We store the event label with the  energy when we can:
             particle = larcv.Particle()
@@ -233,16 +198,18 @@ def convert_to_larcv(
                 true_e = numpy.sum(this_hits['energy'])
             particle.energy_init(true_e)
 
-        # Store the whole measured energy of the event
-        # if process_lr_hits:
-        for _, io_manager in io_dict.items():
-            # Calculate the reconstructed energy of the event:
+        # Store the whole measured energy of the event, if possible:
+        if tables_found["basic"]:
             energy = this_summary['evt_energy']
             energy = energy_corrected(energy, this_summary['evt_z_min'][0], this_summary['evt_z_max'][0])
-            particle.energy_deposit(energy)
+            for _, io_manager in io_dict.items():
 
-            event_part   = io_manager.get_data("particle", "event")
-            event_part.append(particle)
+                particle = larcv.Particle()
+                # Calculate the reconstructed energy of the event:
+                particle.energy_deposit(energy)
+
+                event_part   = io_manager.get_data("particle", "event")
+                event_part.append(particle)
 
         # Set the event ID for all managers:
         for key, val in io_dict.items():
@@ -250,11 +217,11 @@ def convert_to_larcv(
 
         io_dict['all'].save_entry()
 
-        if process_lr_hits and found_all_images:
+        if tables_found["lr"] and found_all_images:
             io_dict['lr'].save_entry()
 
         # Did this event pass the basic event cuts?
-        if event_no not in passed_events and not out_of_map: continue
+        if event_no not in passed_events: continue
 
         io_dict['cuts'].save_entry()
 
