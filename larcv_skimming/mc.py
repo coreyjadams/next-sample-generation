@@ -27,13 +27,18 @@ def store_mc_info(io_manager, this_hits, this_particles, meta):
 
     # meta = get_NEW_LR_meta()
 
+    # First, infer the names of important columns:
 
-
-
-    if 'particle_indx' in this_hits.dtype.names:
-        cluster_indexes = numpy.unique(this_hits['particle_indx'])
+    names = this_hits.dtype.names
+    if 'particle_indx' in names:
+        particle_id = "particle_indx"
+        hit_energy  = "hit_energy"
     else:
-        cluster_indexes = numpy.unique(this_hits['particle_id'])
+        particle_id = "particle_id"
+        hit_energy  = "energy"
+
+
+    cluster_indexes = numpy.unique(this_hits[particle_id])
 
 
     sc = larcv.SparseCluster3D()
@@ -52,11 +57,11 @@ def store_mc_info(io_manager, this_hits, this_particles, meta):
         if 'hit_position' in hit.dtype.names:
             index = meta.position_to_index(hit['hit_position'])
             # Create a voxel on the fly with the energy
-            vs[cluster_lookup[hit['particle_indx']]].add(larcv.Voxel(index, hit['hit_energy']))
+            vs[cluster_lookup[hit[particle_id]]].add(larcv.Voxel(index, hit[hit_energy]))
         else:
             index = meta.position_to_index((hit['x'], hit['y'], hit['z']))
             # Create a voxel on the fly with the energy
-            vs[cluster_lookup[hit['particle_id']]].add(larcv.Voxel(index, hit['energy']))
+            vs[cluster_lookup[hit[particle_id]]].add(larcv.Voxel(index, hit[hit_energy]))
 
     # Add the voxel sets into the cluster set
     for i, v in enumerate(vs):
@@ -100,7 +105,7 @@ def store_mc_info(io_manager, this_hits, this_particles, meta):
             p.position(*particle['initial_vertex'])
             p.momentum(*particle['momentum'])
         else:
-            p.track_id(particle['particle_id'])
+            p.track_id(particle[particle_id])
             p.parent_track_id(particle['mother_id'])
             p.position(
                 particle['initial_x'],

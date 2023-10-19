@@ -5,7 +5,7 @@ from parsl.app.app import python_app, bash_app
 
 
 
-@bash_app(cache=False)
+@bash_app(cache=True)
 def larcv(inputs, outputs, run, subrun, workdir, script, detector, sample, db, stdout, stderr):
     """
     inputs[0] should be the input file
@@ -37,7 +37,7 @@ python {script} -sr {subrun} -r {run} -i {input} -o {output} -db {db} --detector
     # print(script)
     return script
 
-@bash_app(cache=False)
+@bash_app(cache=True)
 def merge_larcv(inputs, outputs, workdir, stdout, stderr):
     """
     inputs should be a list of files for merge.

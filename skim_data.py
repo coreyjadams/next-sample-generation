@@ -224,7 +224,21 @@ def discover_inputs(args):
 
     if args.sample == "kr":
         return discover_krypton_files(args.input_dir, args.run, args.trigger)
-
+    else:
+        file_list = []
+        # Look for all h5 files in the directory:
+        pattern = str(args.input_dir) + "/*.h5"
+        files = glob.glob(pattern)
+        for file in files:
+            file_base = os.path.basename(file)
+            subrun = file.split(".")[0].split("_")[-1].replace("cut","")
+            subrun = int(subrun)
+            file_list.append({
+                "subrun" : subrun,
+                "cdst"   : file,
+                "larcv"  : file_base.replace(".root.h5",".larcv.h5"),
+            })
+        return file_list
 
 def build_parser():
         # Make parser object
@@ -275,7 +289,6 @@ if __name__ == '__main__':
 
     # Discover the input files we need to process:
     input_files = discover_inputs(args)
-
 
     all_futures = []
 

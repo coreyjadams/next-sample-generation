@@ -22,7 +22,6 @@ def basic_event_pass(summary_table, detector, sample):
     # 1 track:
     mask = summary_table['evt_ntrks'] == 1
 
-
     # Z Min:
     mask = numpy.logical_and(mask, summary_table['evt_z_min'] > 20.0) # Z = 0 + 2cm
 
@@ -32,7 +31,9 @@ def basic_event_pass(summary_table, detector, sample):
     # R Max:
     mask = numpy.logical_and(mask, summary_table['evt_r_max'] < 180.0) # R = 180 CM from ander
 
+
     # Out of map?
-    mask = numpy.logical_and(mask, summary_table['evt_out_of_map'])
+    out_of_map = numpy.logical_not(summary_table['evt_out_of_map'])
+    mask = numpy.logical_and(mask, out_of_map)
 
     return mask

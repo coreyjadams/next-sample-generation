@@ -64,6 +64,11 @@ def read_mandatory_tables(input_files):
             "/MC/hits/",
             "/MC/particles/",
         ],
+        "mc_old": [
+            "/MC/extents/",
+            "/MC/hits/",
+            "/MC/particles/",
+        ],
         "lr"    : [
             "/DECO/Events/",
         ]

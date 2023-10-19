@@ -2,6 +2,8 @@ import socket
 
 from parsl.addresses import address_by_interface
 
+from parsl.providers import PBSProProvider, LocalProvider
+from parsl.executors import HighThroughputExecutor, ThreadPoolExecutor
 
 def create_provider_by_hostname(user_opts):
 
@@ -19,7 +21,7 @@ def create_provider_by_hostname(user_opts):
             worker_init     = "source /home/cadams/Polaris/NEXT/next-sample-generation/setup_worker.sh",
         )
     else:
-        return None
+        return LocalProvider()
 
 def create_executor_by_hostname(user_opts, provider):
 
@@ -38,8 +40,8 @@ def create_executor_by_hostname(user_opts, provider):
                     cpu_affinity="alternating",
                     prefetch_capacity=0,
                     provider=provider
-                    # provider=provider,
                 )
+    
     else:
         # default: 
         from parsl import ThreadPoolExecutor
