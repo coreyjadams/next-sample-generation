@@ -106,8 +106,8 @@ def convert_to_larcv(
         pmap_tables = {key : input_tables["pmaps"]["/PMAPS/" + key + "/"] for key in keys}
 
 
-    base_meta = get_meta(detector, zoom=[1.,1.,0.1])
-    hr_meta   = get_meta(detector, zoom=[10,10,1])
+    base_meta = get_meta(detector, zoom=[1.,1.,1.])
+    hr_meta   = get_meta(detector, zoom=[10,10,10])
     pmt_meta  = get_pmt_meta(n_pmts=12, n_time_ticks=550)
 
     # Problematic:

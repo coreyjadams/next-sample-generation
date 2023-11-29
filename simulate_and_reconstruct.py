@@ -7,54 +7,31 @@ from parsl.app.app import python_app, bash_app
 
 # parsl.set_stream_logger() # <-- log everything to stdout
 
-
+NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
+IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
 
 from parsl.config import Config
 
 # from libsubmit.providers.local.local import Local
-from parsl.providers import PBSProProvider, LocalProvider
 from parsl.channels import LocalChannel
-from parsl.executors import HighThroughputExecutor, ThreadPoolExecutor
 from parsl.launchers import MpiExecLauncher, GnuParallelLauncher
 from parsl.addresses import address_by_hostname
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.utils import get_all_checkpoints
+from parsl.data_provider.files import File
 
+from parsl_tools.utils import create_provider_by_hostname, create_executor_by_hostname
 
 def create_config(user_opts):
 
     checkpoints = get_all_checkpoints(user_opts["run_dir"])
     # print("Found the following checkpoints: ", checkpoints)
 
-    provider = PBSProProvider(
-        account = "datascience",
-        queue   = "debug",
-        nodes_per_block = 1,
-        cpus_per_node   = user_opts["cpus_per_node"],
-        init_blocks     = 1,
-        max_blocks      = 1,
-        walltime        = "01:00:00",
-        scheduler_options = '#PBS -l filesystems=home:grand',
-        worker_init     = "source /home/cadams/Polaris/NEXT/next-sample-generation/setup_worker.sh",
-    )
-                        
+    providor = create_provider_by_hostname(user_opts)
+    executor = create_executor_by_hostname(user_opts, providor)
 
     config = Config(
-            executors=[
-                HighThroughputExecutor(
-                    label="htex",
-                    heartbeat_period=15,
-                    heartbeat_threshold=120,
-                    worker_debug=True,
-                    max_workers=user_opts["cpus_per_node"],
-                    cores_per_worker=1,
-                    address=address_by_hostname(),
-                    cpu_affinity="alternating",
-                    prefetch_capacity=0,
-                    provider=LocalProvider()
-                    # provider=provider,
-                ),
-            ],
+            executors=[executor],
             checkpoint_files = checkpoints,
             run_dir=user_opts["run_dir"],
             checkpoint_mode = 'task_exit',
@@ -115,7 +92,7 @@ def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     """
     script = """
 
-source /home/cadams/Polaris/NEXT/next-sample-generation/setup_nexus.sh
+source {setup}
 
 cd {workdir}
 nexus -n {n_events} -c {mac}
@@ -123,6 +100,7 @@ nexus -n {n_events} -c {mac}
 # rm GammaEnergy.root
 
     """.format(
+            setup    = NEXUS_SCRIPT,
             workdir  = workdir,
             n_events = n_events,
             mac      = inputs[0]
@@ -142,13 +120,7 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     script = """
 
 # Set up IC with this stuff:
-module load conda;
-# source /home/cadams/miniconda/bin/activate
-conda activate IC-3.8-2022-04-13
-export ICTDIR=/home/cadams/Polaris/NEXT/IC/
-export ICDIR=$ICTDIR/invisible_cities
-export PYTHONPATH=$ICTDIR
-export DBDIR=/home/cadams/NEXT/next-sample-generation/config_templates/
+source {setup}
 
 cd {workdir}
 
@@ -157,6 +129,7 @@ export PATH=$ICTDIR/bin:$PATH
 city {city}  -i {input} -o {output} --event-range=all {config}
 
     """.format(
+        setup  = IC_SETUP,
         city   = city,
         config = config,
         workdir = workdir,
@@ -291,8 +264,8 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
     output_holder = {}
 
-    # for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
-    for city in ["detsim", "diomira", "irene", "penthesilea", "esmeralda", "beersheba"]: 
+    for city in ["detsim", "hypathia", "penthesilea", "esmeralda", "beersheba"]:
+    # for city in ["detsim", "irene", "penthesilea", "esmeralda", "beersheba"]: 
         latest_output = File(output_file.url.replace("nexus", city))
 
         latest_future = ic(
@@ -319,7 +292,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
 
     inputs = [
-        output_holder[k] for k in {"irene", "esmeralda", "beersheba"}
+        output_holder[k] for k in {"detsim", "esmeralda", "beersheba"}
     ]
 
     # Find the database file:
@@ -435,6 +408,9 @@ def build_parser():
     p.add_argument("--output-dir", "-o", type=pathlib.Path,
                    required=True,
                    help="Top level directory for output")
+    p.add_argument("--trigger", "-t", type=int,
+                   required=True, default=2, choices=[1,2],
+                   help="Trigger path of reconstruction to take.")
                 
     # group1 = p.add_mutually_exclusive_group(required=True)
     # group1.add_argument('--enable',action="store_true")

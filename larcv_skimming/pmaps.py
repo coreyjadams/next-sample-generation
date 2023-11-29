@@ -153,10 +153,8 @@ def pmaps_to_xyzE(this_pmaps, db_lookup):
         # x_locations = numpy.take(db_lookup["x_lookup"], this_pmaps["S2Si"]["nsipm"])[selection]
         # y_locations = numpy.take(db_lookup["y_lookup"], this_pmaps["S2Si"]["nsipm"])[selection]
 
-
         x_locations = numpy.take(db_lookup["x_lookup"], filtered_S2Si["nsipm"])
         y_locations = numpy.take(db_lookup["y_lookup"], filtered_S2Si["nsipm"])
-
         pmt_locations = filtered_S2Pmt["npmt"]
 
         # Filter the energy_sipm to active sites

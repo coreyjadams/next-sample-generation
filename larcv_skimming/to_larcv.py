@@ -163,13 +163,16 @@ def convert_entry_point(input_files, output_file, run, subrun, db_location, dete
     print("Searh results for the following skim paths: ")
     for key in skim_requirements_found:
         print(f"  - {key}:  {skim_requirements_found[key]}")
-
-    sipm_db = pandas.read_pickle(db_location)
-    db_lookup = {
-        "x_lookup" : numpy.asarray(sipm_db['X']),
-        "y_lookup" : numpy.asarray(sipm_db['Y']),
-        "active"   : numpy.asarray(sipm_db['Active']),
-    }
+    
+    if detector == "new":
+        sipm_db = pandas.read_pickle(db_location)
+        db_lookup = {
+            "x_lookup" : numpy.asarray(sipm_db['X']),
+            "y_lookup" : numpy.asarray(sipm_db['Y']),
+            "active"   : numpy.asarray(sipm_db['Active']),
+        }
+    else:
+        db_lookup = None
     
     convert_to_larcv(
         skimming_found_tables, skim_requirements_found,
