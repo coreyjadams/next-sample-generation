@@ -11,22 +11,22 @@
 /event/verbose    0
 /tracking/verbose 0
 
-### PORT_1a, PORT_1b, PORT_2a, PORT_2b
-/Generator/IonGenerator/atomic_number 81
-/Generator/IonGenerator/mass_number 208
-/Generator/IonGenerator/region PORT_1a
+/Generator/Decay0Interface/inputFile       none
+/Generator/Decay0Interface/Xe136DecayMode  4
+/Generator/Decay0Interface/Ba136FinalState 0
+/Generator/Decay0Interface/region          ACTIVE
+
 /Actions/DefaultEventAction/min_energy 1.45 MeV
-/Actions/DefaultEventAction/max_energy 1.75 MeV
 
 
 /Geometry/Next100/max_step_size  1.  mm
 /Geometry/Next100/pressure      13.5 bar
 /Geometry/Next100/elfield       false
-/Geometry/Next100/gas           enrichedXe
 
 
 /nexus/persistency/output_file {output_file}
 /nexus/persistency/start_id {event}
+/nexus/persistency/event_type bb2nu
 
 ### JOB CONTROL
 /nexus/random_seed {seed}

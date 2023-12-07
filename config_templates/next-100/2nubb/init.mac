@@ -1,0 +1,25 @@
+## ----------------------------------------------------------------------------
+## nexus | NEXT100.init.mac
+##
+## Initialization macro to simulate Tl-208 radioactive decays from the dice
+## boards in the NEXT-100 detector.
+##
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+/PhysicsList/RegisterPhysics G4EmStandardPhysics_option4
+/PhysicsList/RegisterPhysics G4DecayPhysics
+/PhysicsList/RegisterPhysics G4RadioactiveDecayPhysics
+/PhysicsList/RegisterPhysics G4StepLimiterPhysics
+
+/nexus/RegisterGeometry  Next100
+/nexus/RegisterGenerator Decay0Interface
+
+
+/nexus/RegisterRunAction      DefaultRunAction
+/nexus/RegisterEventAction    DefaultEventAction
+/nexus/RegisterTrackingAction DefaultTrackingAction
+/nexus/RegisterPersistencyManager PersistencyManager
+
+
+/nexus/RegisterMacro {mac_file}

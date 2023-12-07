@@ -392,7 +392,7 @@ def build_parser():
                    help="req number")
     p.add_argument("--sample", "-s", type=lambda x : str(x).lower(),
                    required=True,
-                   choices=["tl208", "kr", "muons"])
+                   choices=["tl208", "kr", "muons", "2nubb"])
     p.add_argument("--events-per-file", "-e", type=int,
                    default=500000,
                    help="Number of nexus events per file")
