@@ -16,29 +16,33 @@ def get_NEXT_100_meta(zoom_sampling=1.0):
     next_next100_meta = larcv.ImageMeta3D()
     # set_dimension(size_t axis, double image_size, size_t number_of_voxels, double origin = 0);
 
-    # The generic detector size here is 48x48 cm square (actually round),
-    # with 55. cm length.  We'll work exclusively in mm below, but also going to 
-    # pad things to enable better downsampling in ML algorithms.
+    voxel_size = [15.55,15.55,15]
 
-    actual_length = [1000, 1000, 1000] # mm 
-    actual_voxels = [100, 100, 100] # no units
-    actual_origin = [-500,-500, 0] # mm
+    actual_voxels = [64, 64, 96]
+
+    actual_length = [ n * v for n, v in zip(actual_voxels, voxel_size)] # mm 
+    print(actual_length)
+    # actual_voxels = [100, 100, 100] # no units
+    actual_origin = [-489.825 - 0.5*15.55,-489.825 - 0.5*15.55, 0] # mm
+    
 
     voxel_size = [l / nv for l, nv in zip(actual_length, actual_voxels)]
-    # print("voxel_size: ", voxel_size) # mm / voxel
+    print("voxel_size: ", voxel_size) # mm / voxel
 
-    target_voxels = [1024, 1024, 1024] # no units (voxels)
+    # target_voxels = [64, 64, 64] # no units (voxels)
+    target_voxels = actual_voxels
 
     new_length = [t * vs for t, vs in zip(target_voxels, voxel_size)] # mm
 
-    # print("new_length: ", new_length)
+    print("new_length: ", new_length)
 
 
     padding = [ (n - a) //2 for n, a in zip(new_length, actual_length)]
-    # print("padding: ", padding)
+    print("padding: ", padding)
     origin  = [ o - p for o, p in zip(actual_origin, padding)]
-    # print("origin: ", origin)
-
+    print("origin: ", origin)
+    print("zoom: ", zoom_sampling)
+    # exit()
     # Now compute how many actual voxels based on the zoom:
 
     if type(zoom_sampling) == int or type(zoom_sampling) == float:
