@@ -83,3 +83,47 @@ def get_tl208_label_and_store_vertex(io_manager, this_hits, this_particles, meta
     # print("e+ in particles: ", b'e+' in this_particles['particle_name'])
 
     return positron
+
+
+
+def get_and_store_2nubb_vertex(io_manager, this_hits, this_particles, meta):
+    
+
+
+    names = this_particles.dtype.names
+    if 'particle_indx' in names:
+        particle_id = "particle_indx"
+        mother_id   = "mother_indx"
+        hit_energy  = "hit_energy"
+        style = "old"
+    else:
+        particle_id = "particle_id"
+        mother_id   = "mother_id"
+        style = "new"
+
+
+    vertex = None
+    # Storage for vertex:
+    vertex_set = io_manager.get_data("bbox3d", "vertex")
+    vertex_set.clear()
+    vertex_collection = larcv.BBoxCollection3D()
+    vertex_collection.meta(meta)
+
+    for particle in this_particles:
+        if particle['primary']:
+            vertex = particle
+            if style == "new":
+                vertex_bbox = larcv.BBox3D(
+                    (vertex['initial_x'], vertex['initial_y'], vertex['initial_z']),
+                    (0., 0., 0.)
+                )
+            else:
+                vertex_bbox = larcv.BBox3D(
+                    vertex['initial_vertex'][0:3],
+                    (0., 0., 0.)
+                )
+            vertex_collection.append(vertex_bbox)
+            break
+
+    vertex_set.set([vertex_collection,])
+    return True

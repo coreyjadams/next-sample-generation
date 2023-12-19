@@ -19,18 +19,29 @@ def krypton_selection(events_table, detector, sample):
 
 def basic_event_pass(summary_table, detector, sample):
 
+
     # 1 track:
     mask = summary_table['evt_ntrks'] == 1
 
     # Z Min:
     mask = numpy.logical_and(mask, summary_table['evt_z_min'] > 20.0) # Z = 0 + 2cm
 
-    # Z Max:
-    mask = numpy.logical_and(mask, summary_table['evt_z_max'] < 510.0) # Z = 55 - 2 cm
+    if detector == "new":
 
-    # R Max:
-    mask = numpy.logical_and(mask, summary_table['evt_r_max'] < 180.0) # R = 180 CM from ander
+        # Z Max:
+        mask = numpy.logical_and(mask, summary_table['evt_z_max'] < 510.0) # Z = 55 - 2 cm
 
+        # R Max:
+        mask = numpy.logical_and(mask, summary_table['evt_r_max'] < 180.0) # R = 180 CM from ander
+
+    elif detector == "next100":
+
+        # Z Max:
+        mask = numpy.logical_and(mask, summary_table['evt_z_max'] < 1100.0) # Z = 55 - 2 cm
+
+        # R Max:
+        mask = numpy.logical_and(mask, summary_table['evt_r_max'] < 480.0) # R = 180 CM from ander
+        
 
     # Out of map?
     out_of_map = numpy.logical_not(summary_table['evt_out_of_map'])

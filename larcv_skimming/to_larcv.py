@@ -211,7 +211,7 @@ def main():
     parser.add_argument("--sample", "-s", 
         type=lambda x : str(x).lower(),
         required=True,
-        choices=["tl208", "kr"])
+        choices=["tl208", "kr", "muons", "2nubb"])
 
     parser.add_argument("-r", "--run",
         type=int,

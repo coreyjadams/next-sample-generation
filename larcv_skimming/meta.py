@@ -16,9 +16,9 @@ def get_NEXT_100_meta(zoom_sampling=1.0):
     next_next100_meta = larcv.ImageMeta3D()
     # set_dimension(size_t axis, double image_size, size_t number_of_voxels, double origin = 0);
 
-    voxel_size = [15.55,15.55,15]
+    voxel_size = [15.55,15.55,10]
 
-    actual_voxels = [64, 64, 96]
+    actual_voxels = [64, 64, 128]
 
     actual_length = [ n * v for n, v in zip(actual_voxels, voxel_size)] # mm 
     print(actual_length)

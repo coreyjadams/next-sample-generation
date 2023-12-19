@@ -7,8 +7,9 @@ from parsl.app.app import python_app, bash_app
 
 # parsl.set_stream_logger() # <-- log everything to stdout
 
-NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
-IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
+# NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
+# IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
+
 
 from parsl.config import Config
 
@@ -19,8 +20,10 @@ from parsl.addresses import address_by_hostname
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.utils import get_all_checkpoints
 from parsl.data_provider.files import File
+from parsl.dataflow.errors import DependencyError
 
-from parsl_tools.utils import create_provider_by_hostname, create_executor_by_hostname
+
+from parsl_tools.utils import create_provider_by_hostname, create_executor_by_hostname, create_default_useropts
 
 def create_config(user_opts):
 
@@ -90,6 +93,7 @@ def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     inputs[0] should be the mac file
     outputs[0] is the output file name
     """
+    NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
     script = """
 
 source {setup}
@@ -115,6 +119,7 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     inputs[0] should be the input file
     outputs[0] is the output file name
     """
+    IC_SETUP     = "/home/cadams/Polaris/NEXT/setup-IC.sh"
 
     # what is the location of this script?
     script = """
@@ -447,11 +452,15 @@ if __name__ == '__main__':
     output_dir.mkdir(parents=True, exist_ok=True)
 
 
-    user_opts = {
-        "cpus_per_node" : 8,
-        "run_dir"       : f"{str(output_dir)}/runinfo",
-        "strategy"      : "simple"
-    }
+    user_opts = create_default_useropts(allocation="datascience")
+    user_opts['run_dir'] = f"{str(output_dir)}/runinfo"
+    # {
+    #     "cpus_per_node" : 32,
+    #     "run_dir"       : f"{str(output_dir)}/runinfo",
+    #     "strategy"      : "simple",
+    #     "allocation"    : "datascience",
+    #     "queue"         : "debug",
+    # }
 
 
     config = create_config(user_opts)
@@ -459,6 +468,7 @@ if __name__ == '__main__':
     parsl.clear()
     parsl.load(config)
 
+    # NEW info:
 
     # The real acceptance is about 28/25000 = 1.1e-3
     # So, to reach 1M events in the "all" files we need to simulate
@@ -477,6 +487,13 @@ if __name__ == '__main__':
     # That's 5.76e8 events/node-hour @ 64 cores per node.
     # 50 runs with 50 subruns with 720000 events is 1.8 billion events (1.8e9)
     # To reach that, we need  1.8e9 / 5.76e8 = 3 to 4 node hours
+
+
+    # NEXT-100 info:
+    # for 2nuBB events, if we simulate 1000 events about 60-80 make it to the final larcv stage.
+    # To add a little padding, we'll say the acceptance is 160 / 1000 = 16%
+    #
+
     events_per_file = args.events_per_file
     acceptance      = args.acceptance_max
     n_runs          = args.runs
@@ -504,5 +521,20 @@ if __name__ == '__main__':
             ic_template_dir = IC_template_dir
         )
         all_futures += sim_future
+
+    def print_prettier_errors(f):
+        if isinstance(f, DependencyError):
+            print(f"Dependency error: {f}")
+            print("First dependency failed because:")
+            print_prettier_errors(f.dependent_exceptions_tids[0][0])
+        else:
+            print(repr(f))
+
+    for future in all_futures:
+        print_prettier_errors(future)
+
+        # failing_future = cont(cont(cont(my_err())))
+
+        # print_prettier_errors(failing_future.exception())
 
     print(all_futures[-1].result())

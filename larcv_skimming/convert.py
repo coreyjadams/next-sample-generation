@@ -6,7 +6,7 @@ from meta import get_meta, get_pmt_meta
 from pmaps  import store_pmaps
 from chits  import store_chits
 from mc     import store_mc_info
-from vertex import get_tl208_label_and_store_vertex
+from vertex import get_tl208_label_and_store_vertex, get_and_store_2nubb_vertex
 from lr     import store_lr_hits
 
 def slice_into_event(_pmaps, event_number, _keys):
@@ -215,6 +215,8 @@ def convert_to_larcv(
                     positron = get_tl208_label_and_store_vertex(io_manager, this_hits, this_particles, hr_meta)
                     if positron:
                         particle.pdg_code(1)
+                elif sample == "2nubb":
+                    vertex = get_and_store_2nubb_vertex(io_manager, this_hits, this_particles, hr_meta)
             # print("Event number: ", event_no, "(positron: ", positron, ")")
 
             # First, we figure out the extents for this event.
