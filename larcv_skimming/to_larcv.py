@@ -171,6 +171,14 @@ def convert_entry_point(input_files, output_file, run, subrun, db_location, dete
             "y_lookup" : numpy.asarray(sipm_db['Y']),
             "active"   : numpy.asarray(sipm_db['Active']),
         }
+    elif detector == "next-100":
+        sipm_db = pandas.read_pickle(db_location)
+        db_lookup = {
+            "x_lookup" : numpy.asarray(sipm_db['X']),
+            "y_lookup" : numpy.asarray(sipm_db['Y']),
+            "active"   : numpy.asarray(sipm_db['Active']),
+        } 
+        print(db_lookup['x_lookup'].shape)
     else:
         db_lookup = None
     

@@ -423,6 +423,41 @@ def build_parser():
 
     return p
 
+def print_prettier_errors(f):
+    if isinstance(f, DependencyError):
+        print(f"Dependency error: {f}")
+        print("First dependency failed because:")
+        print_prettier_errors(f.dependent_exceptions_tids[0][0])
+    else:
+        print(repr(f))
+
+
+# def flatten_list_of_futures(futures_list):
+#     """
+#     For all futures in the highest level, return a flat list of it's dependencies
+#     to allow state evaluation.
+#     """
+#     flat_list = []
+#     for future in futures_list:
+#         flat_list.append(flatten_single_future(future))
+
+# def flatten_single_future(future):
+#     """
+#     Recursively return a list of dependencies for this future
+#     """
+#     # help(future)
+#     deps = future.task_record.depends
+#     print(future.func_name)
+#     print(deps)
+#     print(len(deps))
+#     exit()
+#     if deps is None:
+#         # Bottom of the list:
+#         return []
+#     else:
+
+#         return [ flatten_single_future(dep) for dep in deps ]
+
 
 
 if __name__ == '__main__':
@@ -522,13 +557,10 @@ if __name__ == '__main__':
         )
         all_futures += sim_future
 
-    def print_prettier_errors(f):
-        if isinstance(f, DependencyError):
-            print(f"Dependency error: {f}")
-            print("First dependency failed because:")
-            print_prettier_errors(f.dependent_exceptions_tids[0][0])
-        else:
-            print(repr(f))
+
+    # list_of_futures = flatten_single_future(all_futures[-1])
+    # print(list_of_futures)
+    # exit()
 
     for future in all_futures:
         print_prettier_errors(future)

@@ -44,6 +44,7 @@ def convert_to_larcv(
         # Create an output larcv file:
         _io_manager = larcv.IOManager(larcv.IOManager.kWRITE)
         _io_manager.set_out_file(str(this_output_name))
+        print(this_output_name)
         _io_manager.initialize()
         io_dict[key] = _io_manager
 
