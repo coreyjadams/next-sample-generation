@@ -80,7 +80,6 @@ def pmaps_to_xyzE(this_pmaps, db_lookup):
 
 
     n_peaks = numpy.max(this_pmaps['S2']['peak'] + 1)
-    # print(n_peaks)
     
     x_list = []
     y_list = []
@@ -162,9 +161,13 @@ def pmaps_to_xyzE(this_pmaps, db_lookup):
         # energy      = energy[selection]
 
         # Convert to physical coordinates
+        # NEXT-100:
+        # z_locations_sipm = ((ticks_sipm - s1_t) / 1190.5).astype(numpy.int32)
+        # z_locations_pmt  = ((ticks_pmt  - s1_t) / 1190.5).astype(numpy.int32)
+
+        # NEXT White: 
         z_locations_sipm = ((ticks_sipm - s1_t) / 1000).astype(numpy.int32)
         z_locations_pmt  = ((ticks_pmt  - s1_t) / 1000).astype(numpy.int32)
-
         
         x_list.append(x_locations)
         y_list.append(y_locations)

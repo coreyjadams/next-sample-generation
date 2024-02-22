@@ -93,7 +93,8 @@ def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     inputs[0] should be the mac file
     outputs[0] is the output file name
     """
-    NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
+    # NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
+    NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
     script = """
 
 source {setup}
@@ -119,7 +120,8 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     inputs[0] should be the input file
     outputs[0] is the output file name
     """
-    IC_SETUP     = "/home/cadams/Polaris/NEXT/setup-IC.sh"
+    # IC_SETUP     = "/home/cadams/Polaris/NEXT/setup-IC.sh"
+    IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
 
     # what is the location of this script?
     script = """

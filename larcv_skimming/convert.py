@@ -108,8 +108,11 @@ def convert_to_larcv(
 
 
     base_meta = get_meta(detector, zoom=[1.,1.,1.])
-    hr_meta   = get_meta(detector, zoom=[10,10,10])
+    hr_meta   = get_meta(detector, zoom=[20,20,20])
     pmt_meta  = get_pmt_meta(n_pmts=12, n_time_ticks=550)
+
+    print(pmt_meta)
+    print(base_meta)
 
     # Problematic:
     if tables_found["basic"]:

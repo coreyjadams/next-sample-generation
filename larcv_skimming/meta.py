@@ -83,13 +83,13 @@ def get_NEW_meta(zoom_sampling=1.0):
     # pad things to enable better downsampling in ML algorithms.
 
     actual_length = [480, 480, 550] # mm 
-    actual_voxels = [48, 48, 55] # no units
+    actual_voxels = [48, 48, 550] # no units
     actual_origin = [-240,-240, 0] # mm
 
     voxel_size = [l / nv for l, nv in zip(actual_length, actual_voxels)]
     # print("voxel_size: ", voxel_size) # mm / voxel
 
-    target_voxels = [64, 64, 64] # no units (voxels)
+    target_voxels = [48, 48, 550] # no units (voxels)
 
     new_length = [t * vs for t, vs in zip(target_voxels, voxel_size)] # mm
 
