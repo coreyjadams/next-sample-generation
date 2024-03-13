@@ -55,6 +55,9 @@ def read_mandatory_tables(input_files):
             "/PMAPS/S2Pmt/",
             "/PMAPS/S2Si/",
         ],
+        "hits" : [
+            "/RECO/Events/",
+        ],
         "chits" : [
             "/CHITS/highTh/",
             "/CHITS/lowTh/",
@@ -83,11 +86,10 @@ def read_mandatory_tables(input_files):
 
     for _f in input_files:
         open_file = tables.open_file(str(_f), 'r')
-        
+        print(_f)
         for skim_key in skimming_needs:
 
             found, not_found = check_file_for_tables(open_file, skimming_needs[skim_key])
-
             if len(found) > 0:
 
                 # Store found keys and pop unfound keys:

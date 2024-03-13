@@ -5,6 +5,7 @@ from meta import get_meta, get_pmt_meta
 
 from pmaps  import store_pmaps
 from chits  import store_chits
+from hits   import store_hits
 from mc     import store_mc_info
 from vertex import get_tl208_label_and_store_vertex, get_and_store_2nubb_vertex
 from lr     import store_lr_hits
@@ -83,6 +84,9 @@ def convert_to_larcv(
     if tables_found["chits"]:
         low_chits = input_tables["chits"]["/CHITS/lowTh/"]
         high_chits = input_tables["chits"]["/CHITS/highTh/"]
+
+    if tables_found["hits"]:
+        hits = input_tables["hits"]["/RECO/Events/"]
 
     # event no is events[i_evt][0]
     # run no is run[i_evt][0]
@@ -179,6 +183,12 @@ def convert_to_larcv(
                 store_chits(io_manager, base_meta, this_low_chits, "lowTh")
                 # print("high: ")
                 store_chits(io_manager, base_meta, this_high_chits, "highTh")
+
+        if tables_found["hits"]:
+            this_hits = hits[hits['event'] == event_no]
+
+            for _, io_manager in io_dict.items():
+                store_hits(io_manager, base_meta, this_hits, "")
 
         # We store the measured energy, correct, in 'energy_deposit'
         # We store the mc energy, if we have it, in 'energy_init'
