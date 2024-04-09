@@ -1,0 +1,43 @@
+## ----------------------------------------------------------------------------
+## nexus | NEXT100_PSF_LT.config.mac
+##
+## Initialization macro to generate the PSF light tables in NEXT100
+##
+## The NEXT Collaboration
+## ----------------------------------------------------------------------------
+
+# verbosity
+/control/verbose  1
+/run/verbose      1
+/event/verbose    0
+/tracking/verbose 0
+
+# generator
+/Generator/ScintGenerator/region   EL_GAP
+/Generator/ScintGenerator/nphotons 1000000
+
+# geometry
+/Geometry/PmtR11410/time_binning   25. nanosecond
+/Geometry/Next100/max_step_size     1. mm
+/Geometry/Next100/pressure        5 bar
+/Geometry/Next100/elfield         false
+
+# physics
+/PhysicsList/Nexus/clustering          false
+/PhysicsList/Nexus/drift               false
+/PhysicsList/Nexus/electroluminescence false
+/PhysicsList/Nexus/photoelectric       false
+
+
+/nexus/persistency/output_file {output_file}
+/nexus/persistency/start_id {event}
+
+### JOB CONTROL
+/nexus/random_seed {seed}
+
+
+/Geometry/Next100/el_gap_gen_disk_diam 20.0 mm
+/Geometry/Next100/el_gap_gen_disk_x   7.775 mm
+/Geometry/Next100/el_gap_gen_disk_y   7.775 mm
+/Geometry/Next100/el_gap_gen_disk_zmin  0.0
+/Geometry/Next100/el_gap_gen_disk_zmax  1.

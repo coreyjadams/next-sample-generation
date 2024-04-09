@@ -267,6 +267,8 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
     latest_future = nexus_future
 
+    if sample in ["psf_lt", "s1_lt", "s2_lt"]:
+        return latest_future
     # ic_template_dir = os.path.dirname(templates[0]) + "/IC/"
 
     output_holder = {}
@@ -325,6 +327,33 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
     return larcv_future
 
+def nexus_only(top_dir, run, n_subruns, start_event, 
+                subrun_offset, n_events, templates, 
+                detector, sample, ic_template_dir=None):
+    
+
+    # This simulates one file's worth of events
+    # through to where it can be reconstructed
+
+    print(f"Run {run} starting at event {start_event}.")
+
+    all_subrun_futures = []
+
+    inputs  = {'all' : [], 'cuts' : []}
+
+    for i_subrun in range(n_subruns):
+        event_offset = start_event + i_subrun*subrun_offset
+        print(f"Run {run}, subrun {i_subrun} starting at event {event_offset}.")
+
+        # Event offset is the absolute number of the first event in nexus.
+        future = simulate_and_reco_file(
+            top_dir, run, i_subrun, event_offset, n_events, templates,
+            detector, sample, ic_template_dir)
+        
+        all_subrun_futures.append(future)
+    print(all_subrun_futures)
+    return all_subrun_futures
+
 def sim_and_reco_run(top_dir, run, n_subruns, start_event, 
                      subrun_offset, n_events, templates, 
                      detector, sample, ic_template_dir):
@@ -347,6 +376,7 @@ def sim_and_reco_run(top_dir, run, n_subruns, start_event,
         larcv_futures = simulate_and_reco_file(
             top_dir, run, i_subrun, event_offset, n_events, templates,
             detector, sample, ic_template_dir)
+
 
         inputs['cuts'].append(larcv_futures.outputs[0])
         inputs['all'].append( larcv_futures.outputs[1])
@@ -399,7 +429,7 @@ def build_parser():
                    help="req number")
     p.add_argument("--sample", "-s", type=lambda x : str(x).lower(),
                    required=True,
-                   choices=["tl208", "kr", "muons", "2nubb"])
+                   choices=["tl208", "kr", "muons", "2nubb", "s1_lt", "s2_lt", "psf_lt"])
     p.add_argument("--events-per-file", "-e", type=int,
                    default=500000,
                    help="Number of nexus events per file")
@@ -545,18 +575,33 @@ if __name__ == '__main__':
 
     all_futures = []
     for i_run in range(n_runs):
-        sim_future = sim_and_reco_run(
-            top_dir       = output_dir,
-            run           = i_run,
-            n_subruns     = n_subruns,
-            start_event   = i_run*events_per_run,
-            subrun_offset = subrun_offset,
-            n_events      = events_per_file,
-            templates     = nexus_input_templates,
-            detector      = args.detector,
-            sample        = args.sample,
-            ic_template_dir = IC_template_dir
-        )
+        if args.sample in ["s1_lt", "s2_lt", "psf_lt"]:
+            sim_future = nexus_only(
+                top_dir       = output_dir,
+                run           = i_run,
+                n_subruns     = n_subruns,
+                start_event   = i_run*events_per_run,
+                subrun_offset = subrun_offset,
+                n_events      = events_per_file,
+                templates     = nexus_input_templates,
+                detector      = args.detector,
+                sample        = args.sample,
+                ic_template_dir = IC_template_dir
+            )
+        else:
+            sim_future = sim_and_reco_run(
+                top_dir       = output_dir,
+                run           = i_run,
+                n_subruns     = n_subruns,
+                start_event   = i_run*events_per_run,
+                subrun_offset = subrun_offset,
+                n_events      = events_per_file,
+                templates     = nexus_input_templates,
+                detector      = args.detector,
+                sample        = args.sample,
+                ic_template_dir = IC_template_dir
+            )
+        
         all_futures += sim_future
 
 
