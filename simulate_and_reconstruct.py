@@ -3,7 +3,7 @@ import parsl
 from parsl.app.app import python_app, bash_app
 # from parsl.configs.local_threads import config
 
-
+import pandas as pd
 
 # parsl.set_stream_logger() # <-- log everything to stdout
 
@@ -128,8 +128,8 @@ def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     inputs[0] should be the mac file
     outputs[0] is the output file name
     """
-    NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
-    # NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
+    # NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
+    NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
     script = """
 
 source {setup}
@@ -307,14 +307,14 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
         compression_output = File(output_file.url.replace("nexus", f"{sample}_compressed"))
         compression_future = compress_light_tables(
-                inputs  = inputs,
-                outputs = larcv_output,
+                inputs  = [nexus_future.outputs[0],],
+                outputs = [compression_output,],
                 workdir  = str(log_dir),
                 stdout  = str(log_dir) + f"/compress.stdout",
                 stderr  = str(log_dir) + f"/compress.stderr"
             )
 
-        return latest_future
+        return compression_future
     # ic_template_dir = os.path.dirname(templates[0]) + "/IC/"
 
     output_holder = {}

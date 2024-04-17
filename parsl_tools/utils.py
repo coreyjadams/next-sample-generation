@@ -77,7 +77,7 @@ def create_default_useropts(allocation="datascience"):
     else:
         # We're likely running locally
         user_opts = {
-            'cpus_per_node' : 64,
+            'cpus_per_node' : 4,
             'strategy' : 'simple',
         }
 
