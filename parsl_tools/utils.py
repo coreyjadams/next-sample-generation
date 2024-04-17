@@ -69,7 +69,7 @@ def create_default_useropts(allocation="datascience"):
             'allocation': allocation,
             'queue': 'debug',
             'walltime': '1:00:00',
-            'nodes_per_block' : 1,
+            'nodes_per_block' : 2,
             'cpus_per_node' : 32,
             'strategy' : 'simple',
         }
@@ -77,7 +77,7 @@ def create_default_useropts(allocation="datascience"):
     else:
         # We're likely running locally
         user_opts = {
-            'cpus_per_node' : 32,
+            'cpus_per_node' : 64,
             'strategy' : 'simple',
         }
 

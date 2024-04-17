@@ -87,14 +87,49 @@ def create_config_file(inputs, outputs, run, event_start, output_filename):
 
     return
 
+@python_app(cache=True)
+def compress_light_tables(inputs, outputs, workdir, stdout, stderr):
+    """inputs[0] should be in the input file
+    outputs[0] is the output file name
+
+    """
+
+
+    config = pd.read_hdf(inputs[0], key = 'MC/configuration')
+    # print(config)
+
+    parts = pd.read_hdf(inputs[0], key = 'MC/particles')
+
+    # Same with the hits
+    hits = pd.read_hdf(inputs[0], key = 'MC/hits')
+    # print(hits)
+
+    # Same with the sensor hits
+    sns_response = pd.read_hdf(inputs[0], key = 'MC/sns_response')
+    # print(sns_response[0:10])
+
+    # Same with the sensor positions
+    sns_positions = pd.read_hdf(inputs[0], key = 'MC/sns_positions')
+
+
+    # Open the HDF5 file in write mode
+    with pd.HDFStore(f"{outputs[0]}", mode='w', complevel=5, complib='zlib') as store:
+        # Write each DataFrame to the file with a unique key
+        store.put('MC/configuration', config, format='table')
+        store.put('MC/particles',parts, format='table')
+        store.put('MC/hits',hits, format='table')
+        store.put('MC/sns_response',sns_response, format='table')
+        store.put('MC/sns_positions',sns_positions, format='table')
+
+
 @bash_app(cache=True)
 def nexus_simulation(inputs, outputs, n_events, workdir, stdout, stderr):
     """
     inputs[0] should be the mac file
     outputs[0] is the output file name
     """
-    # NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
-    NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
+    NEXUS_SCRIPT = "/home/cadams/Polaris/NEXT/setup-nexus.sh"
+    # NEXUS_SCRIPT = "/home/cadams/NEXT/setup_nexus.sh"
     script = """
 
 source {setup}
@@ -120,8 +155,8 @@ def ic(inputs, outputs, workdir, city, config, stdout, stderr):
     inputs[0] should be the input file
     outputs[0] is the output file name
     """
-    # IC_SETUP     = "/home/cadams/Polaris/NEXT/setup-IC.sh"
-    IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
+    IC_SETUP     = "/home/cadams/Polaris/NEXT/setup-IC.sh"
+    # IC_SETUP     = "/home/cadams/NEXT/setup_ic.sh"
 
     # what is the location of this script?
     script = """
@@ -146,7 +181,7 @@ city {city}  -i {input} -o {output} --event-range=all {config}
     return script
 
 
-@bash_app(cache=False)
+@bash_app(cache=True)
 def larcv(inputs, outputs, run, subrun, workdir, script, detector, sample, db, stdout, stderr):
     """
     inputs[0] should be the input file
@@ -268,6 +303,17 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
     latest_future = nexus_future
 
     if sample in ["psf_lt", "s1_lt", "s2_lt"]:
+        # Peel off and don't run IC, but do run skimming:
+
+        compression_output = File(output_file.url.replace("nexus", f"{sample}_compressed"))
+        compression_future = compress_light_tables(
+                inputs  = inputs,
+                outputs = larcv_output,
+                workdir  = str(log_dir),
+                stdout  = str(log_dir) + f"/compress.stdout",
+                stderr  = str(log_dir) + f"/compress.stderr"
+            )
+
         return latest_future
     # ic_template_dir = os.path.dirname(templates[0]) + "/IC/"
 
@@ -301,7 +347,7 @@ def simulate_and_reco_file(top_dir, run, subrun, event_offset, n_events,
 
 
     inputs = [
-        output_holder[k] for k in {"detsim", "esmeralda", "beersheba"}
+        output_holder[k] for k in {"detsim", "esmeralda", "beersheba", "hypathia"}
     ]
 
     # Find the database file:
@@ -351,7 +397,7 @@ def nexus_only(top_dir, run, n_subruns, start_event,
             detector, sample, ic_template_dir)
         
         all_subrun_futures.append(future)
-    print(all_subrun_futures)
+
     return all_subrun_futures
 
 def sim_and_reco_run(top_dir, run, n_subruns, start_event, 
@@ -521,13 +567,6 @@ if __name__ == '__main__':
 
     user_opts = create_default_useropts(allocation="datascience")
     user_opts['run_dir'] = f"{str(output_dir)}/runinfo"
-    # {
-    #     "cpus_per_node" : 32,
-    #     "run_dir"       : f"{str(output_dir)}/runinfo",
-    #     "strategy"      : "simple",
-    #     "allocation"    : "datascience",
-    #     "queue"         : "debug",
-    # }
 
 
     config = create_config(user_opts)

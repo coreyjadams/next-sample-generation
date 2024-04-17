@@ -14,7 +14,7 @@
 
 # generator
 /Generator/ScintGenerator/region   EL_GAP
-/Generator/ScintGenerator/nphotons 10000
+/Generator/ScintGenerator/nphotons 1000000
 
 # geometry
 /Geometry/PmtR11410/time_binning   25. nanosecond
